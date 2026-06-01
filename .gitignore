@@ -1,0 +1,24 @@
+# Terraform/OpenTofu
+*.tfvars
+*.tfvars.json
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfstate.*.backup
+tfplan
+*.tfplan
+
+# Generated outputs
+tofu/out/
+
+# OS
+.DS_Store
+
+# DEV env
+CLAUDE.md
+.claude
+.idea
+temp/
+
+/apps/.idea/
