@@ -1,3 +1,31 @@
+# Smoke test for SOPS + KSOPS via ArgoCD CMP. Delete after verification.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sops-test
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sops-test
+  source:
+    repoURL: https://github.com/RootButcher/homelab-apps
+    targetRevision: HEAD
+    path: infra/sops-test
+    plugin:
+      name: kustomize-sops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
 # Tier 2 — infra stack master. One Application per app.
 # Helm pattern: two sources — upstream chart + this repo with `ref: values`
 #               so the chart's valueFiles reads $values/infra/<app>/values.yaml.
