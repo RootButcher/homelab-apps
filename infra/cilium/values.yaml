@@ -34,6 +34,16 @@ securityContext:
 operator:
   replicas: 1
 
+# L2 announcements + LB IPAM (lbIPAM is enabled by default in 1.16)
+l2announcements:
+  enabled: true
+
+# Recommended bumps when l2announcements is enabled — agents create/refresh leases
+# frequently, default client rate limits can throttle them.
+k8sClientRateLimit:
+  qps: 50
+  burst: 100
+
 hubble:
   enabled: true
   relay:

@@ -1,0 +1,36 @@
+deployment:
+  replicas: 1
+
+service:
+  type: LoadBalancer
+  annotations:
+    # Pin to a stable IP from the Cilium LB IPAM pool (homelab-lb-pool, 10.0.11.100-150).
+    lbipam.cilium.io/ips: "10.0.11.100"
+
+ports:
+  web:
+    port: 8000
+    exposedPort: 80
+    protocol: TCP
+    expose:
+      default: true
+  websecure:
+    port: 8443
+    exposedPort: 443
+    protocol: TCP
+    expose:
+      default: true
+    tls:
+      enabled: true
+
+providers:
+  kubernetesIngress:
+    enabled: true
+    publishedService:
+      enabled: true
+  kubernetesCRD:
+    enabled: true
+
+ingressClass:
+  enabled: true
+  isDefaultClass: true
