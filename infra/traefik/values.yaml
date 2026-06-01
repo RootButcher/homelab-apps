@@ -34,3 +34,12 @@ providers:
 ingressClass:
   enabled: true
   isDefaultClass: true
+
+# Built-in dashboard IngressRoute. No auth in front today; add basic-auth
+# middleware once sealed-secrets workflow is in place.
+ingressRoute:
+  dashboard:
+    enabled: true
+    matchRule: Host(`traefik.local.rootbutcher.dev`)
+    entryPoints:
+      - web

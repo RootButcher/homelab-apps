@@ -61,6 +61,32 @@ spec:
       - ServerSideApply=true
       - CreateNamespace=true
 ---
+# Cross-namespace IngressRoutes. hubble.yaml lives in kube-system, argocd.yaml in argocd.
+# Each route's namespace is set on the resource itself; destination.namespace below is
+# just the Application's default and not load-bearing.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ingress-routes
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: traefik
+  source:
+    repoURL: https://github.com/RootButcher/homelab-apps
+    targetRevision: HEAD
+    path: infra/ingress-routes
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
