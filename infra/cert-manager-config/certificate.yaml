@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-local-rootbutcher-dev
+  namespace: traefik
+spec:
+  secretName: wildcard-local-rootbutcher-dev-tls
+  issuerRef:
+    name: letsencrypt-staging
+    kind: ClusterIssuer
+  commonName: "*.local.rootbutcher.dev"
+  dnsNames:
+    - "*.local.rootbutcher.dev"
+    - "local.rootbutcher.dev"

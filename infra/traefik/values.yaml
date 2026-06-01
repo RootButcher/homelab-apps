@@ -14,6 +14,11 @@ ports:
     protocol: TCP
     expose:
       default: true
+    # Anything that hits :80 gets a 308 to https://. IngressRoutes only need
+    # to listen on websecure.
+    redirectTo:
+      port: websecure
+      scheme: https
   websecure:
     port: 8443
     exposedPort: 443
