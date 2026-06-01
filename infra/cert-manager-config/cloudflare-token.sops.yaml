@@ -5,7 +5,7 @@ metadata:
     namespace: ENC[AES256_GCM,data:XOEqI+ingaxLxpCI,iv:EkgDQWf7hvsyZReNmg7WWoIZM1xmQK9F1e/lrDOcXDw=,tag:Xrah8BQqaFvElNkTQeTjFg==,type:str]
 type: ENC[AES256_GCM,data:guZsPLav,iv:q9M41ix0YwZctaBKH1admrUOS3A9Web7wyGlYs0mfZM=,tag:NtMrTqOxVdMmxsfp7VAA0g==,type:str]
 stringData:
-    api-token: ENC[AES256_GCM,data:Db2IOD8skYMG4b/tRFlXZLJiYT0Kb022TNU5emSY0DlkXA==,iv:nRrfKzjM+6m2UFmxDxzYwTxwrJKEWQlCfyM1e6VYSdE=,tag:ag4HMPkD7nfeUyIzzdkMkQ==,type:str]
+    api-token: ENC[AES256_GCM,data:/RJEdddTnm3sxn87zYylhsZF4KEO6efxuHtJKNS+4ODqPwF/L1I90p1WFRBEA8VP0meX8QQ=,iv:FbAsjdqHPzUcX4EGAIIQh73FAHL4UQkydEEs5rpjGEw=,tag:1E2EtD7tZyM7bx5GiYXM9w==,type:str]
 sops:
     age:
         - enc: |
@@ -17,7 +17,7 @@ sops:
             tX1qf6Z0nxgjVdVQGkNQ4BOAt6FMn8QXwyryzmU4agvZsyYkfxYtcw==
             -----END AGE ENCRYPTED FILE-----
           recipient: age1nnmg6lemam8f87cfnhm3ffduptpjmjudq9cm064qtrkdl2jhq40qjpkaue
-    lastmodified: "2026-06-01T21:42:12Z"
-    mac: ENC[AES256_GCM,data:0LW/oVnnBET+khHMM1+u6iHNNfxRbf6NC2b53ugMjSwkxJ6lQvldn1j465D2pBe+jN6ssbOXauKdJigEL0kQ1hVjMTmEbE8O3DpLgLndf2DHFBNO67M6/IKPyKs+At4J3ao7o6G4e/w3Ix6QQ4l/kq3MC61c4YgMCNxaHgsdL84=,iv:iiJFVyN3ulJf3CDXJHeoK8YWnKwDV1IHVmuupzphj5M=,tag:vg55oy0LCeWWpqo3n8hFGg==,type:str]
+    lastmodified: "2026-06-01T22:08:03Z"
+    mac: ENC[AES256_GCM,data:a+30W0RwxGB7KEQ/Ffx27pG5U/hQskF8qYRp9llmlp8KOU7zj2m7L1YenTGcYyECmk3X2m65TMhleEAEFS2ct3FULW90uKhNhsblzI2S2iTtvYW9bLCREwKGQOOAdjCaMPztJ90wy1q3QcIKKccuyxrn2RmEFdZkzlXTh2XVrBA=,iv:k1YLGX+Eo5g26LvsFcpr5XlFVk28J0pWUMfi5nwLkeo=,tag:ik9l2SKgxZY8i3AqrJKSxg==,type:str]
     unencrypted_suffix: _unencrypted
     version: 3.13.1
