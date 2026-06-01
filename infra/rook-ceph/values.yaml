@@ -1,0 +1,11 @@
+crds:
+  enabled: true
+
+csi:
+  enableRbdDriver: true
+  enableCephfsDriver: false
+  serviceMonitor:
+    enabled: false
+
+monitoring:
+  enabled: false

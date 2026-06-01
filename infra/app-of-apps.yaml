@@ -3,6 +3,150 @@
 #               pulling raw IngressRoute(s) co-located with the values file.
 # Raw pattern:  single `source:` with `path: infra/<app>` pointing at manifests.
 ---
+# Rook-Ceph operator (helm). The CephCluster + StorageClass live in the
+# rook-ceph-cluster Application so cluster-config edits don't churn the operator.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rook-ceph
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rook-ceph
+  sources:
+    - chart: rook-ceph
+      repoURL: https://charts.rook.io/release
+      targetRevision: v1.15.5
+      helm:
+        valueFiles:
+          - $values/infra/rook-ceph/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
+# Shared SOPS-encrypted TrueNAS API token, consumed by the two democratic-csi releases.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: democratic-csi
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: democratic-csi
+  source:
+    repoURL: https://github.com/RootButcher/homelab-apps
+    targetRevision: HEAD
+    path: infra/democratic-csi
+    plugin:
+      name: kustomize-sops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: democratic-csi-iscsi
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: democratic-csi
+  sources:
+    - chart: democratic-csi
+      repoURL: https://democratic-csi.github.io/charts/
+      targetRevision: 0.14.7
+      helm:
+        valueFiles:
+          - $values/infra/democratic-csi-iscsi/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: democratic-csi-nfs
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: democratic-csi
+  sources:
+    - chart: democratic-csi
+      repoURL: https://democratic-csi.github.io/charts/
+      targetRevision: 0.14.7
+      helm:
+        valueFiles:
+          - $values/infra/democratic-csi-nfs/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
+# CephCluster CR + CephBlockPool + StorageClass.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rook-ceph-cluster
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rook-ceph
+  source:
+    repoURL: https://github.com/RootButcher/homelab-apps
+    targetRevision: HEAD
+    path: infra/rook-ceph-cluster
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
