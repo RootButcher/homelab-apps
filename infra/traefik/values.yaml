@@ -35,11 +35,9 @@ ingressClass:
   enabled: true
   isDefaultClass: true
 
-# Built-in dashboard IngressRoute. No auth in front today; add basic-auth
-# middleware once sealed-secrets workflow is in place.
+# Disable the chart's built-in dashboard IngressRoute. The chart renders an empty
+# metadata.annotations map that k8s strips on storage, causing permanent ArgoCD drift.
+# We define our own dashboard route in apps/infra/ingress-routes/traefik-dashboard.yaml.
 ingressRoute:
   dashboard:
-    enabled: true
-    matchRule: Host(`traefik.local.rootbutcher.dev`)
-    entryPoints:
-      - web
+    enabled: false

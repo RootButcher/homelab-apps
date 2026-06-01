@@ -1,7 +1,7 @@
 # Tier 2 — infra stack master. One Application per app.
-# Helm pattern: two sources — upstream chart + this repo with `ref: values`
-#               so the chart's valueFiles reads $values/infra/<app>/values.yaml.
-# Raw pattern:  single `source:` with `path: infra/<app>` pointing at manifests in this repo.
+# Helm pattern: chart + ref:values for valueFiles, plus a 3rd repo source
+#               pulling raw IngressRoute(s) co-located with the values file.
+# Raw pattern:  single `source:` with `path: infra/<app>` pointing at manifests.
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -25,6 +25,11 @@ spec:
     - repoURL: https://github.com/RootButcher/homelab-apps
       targetRevision: HEAD
       ref: values
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: infra/cilium
+      directory:
+        include: "ingressroute*.yaml"
   syncPolicy:
     automated:
       prune: true
@@ -61,13 +66,12 @@ spec:
       - ServerSideApply=true
       - CreateNamespace=true
 ---
-# Cross-namespace IngressRoutes. hubble.yaml lives in kube-system, argocd.yaml in argocd.
-# Each route's namespace is set on the resource itself; destination.namespace below is
-# just the Application's default and not load-bearing.
+# ArgoCD-related extras (today: just the IngressRoute). ArgoCD itself is still
+# tofu-managed; this Application only manages resources we add in apps/infra/argocd/.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: ingress-routes
+  name: argocd
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -75,11 +79,11 @@ spec:
   project: default
   destination:
     server: https://kubernetes.default.svc
-    namespace: traefik
+    namespace: argocd
   source:
     repoURL: https://github.com/RootButcher/homelab-apps
     targetRevision: HEAD
-    path: infra/ingress-routes
+    path: infra/argocd
   syncPolicy:
     automated:
       prune: true
@@ -109,6 +113,11 @@ spec:
     - repoURL: https://github.com/RootButcher/homelab-apps
       targetRevision: HEAD
       ref: values
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: infra/traefik
+      directory:
+        include: "ingressroute*.yaml"
   syncPolicy:
     automated:
       prune: true
