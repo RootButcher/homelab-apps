@@ -1,0 +1,47 @@
+server:
+  service:
+    type: NodePort
+    nodePorts:
+      http: 30080
+      https: 30443
+
+configs:
+  params:
+    server.insecure: "true"
+
+# KSOPS sidecar (CMP) — decrypts SOPS-encrypted Secrets at sync time using the
+# age private key mounted from the sops-age Secret in this namespace.
+repoServer:
+  volumes:
+    - name: cmp-tmp
+      emptyDir: {}
+    - name: sops-age
+      secret:
+        secretName: sops-age
+    - name: cmp-plugin
+      configMap:
+        name: cmp-plugin-ksops
+  extraContainers:
+    - name: ksops
+      image: viaductoss/ksops:v4.5.1
+      command:
+        - /var/run/argocd/argocd-cmp-server
+      env:
+        - name: SOPS_AGE_KEY_FILE
+          value: /etc/sops-age/keys.txt
+      volumeMounts:
+        - mountPath: /var/run/argocd
+          name: var-files
+        - mountPath: /home/argocd/cmp-server/plugins
+          name: plugins
+        - mountPath: /tmp
+          name: cmp-tmp
+        - mountPath: /etc/sops-age
+          name: sops-age
+          readOnly: true
+        - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+          subPath: plugin.yaml
+          name: cmp-plugin
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999

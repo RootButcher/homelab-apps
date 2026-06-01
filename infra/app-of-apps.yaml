@@ -123,8 +123,10 @@ spec:
       - ServerSideApply=true
       - CreateNamespace=true
 ---
-# ArgoCD-related extras (today: just the IngressRoute). ArgoCD itself is still
-# tofu-managed; this Application only manages resources we add in apps/infra/argocd/.
+# ArgoCD self-managing itself: helm chart from argo-helm + values.yaml in this repo
+# + 3rd source for the IngressRoute. Tofu still does first-time install on a fresh
+# cluster; lifecycle ignore_changes on tofu's helm_release.argocd keeps it out of
+# the way once ArgoCD has adopted the release.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -137,16 +139,28 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
-  source:
-    repoURL: https://github.com/RootButcher/homelab-apps
-    targetRevision: HEAD
-    path: infra/argocd
+  sources:
+    - chart: argo-cd
+      repoURL: https://argoproj.github.io/argo-helm
+      targetRevision: 7.8.26
+      helm:
+        valueFiles:
+          - $values/infra/argocd/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: infra/argocd
+      directory:
+        include: "ingressroute*.yaml"
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+      - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
