@@ -6,9 +6,11 @@ metadata:
 spec:
   entryPoints:
     - web
+    - websecure
   routes:
     - match: Host(`hubble.local.rootbutcher.dev`)
       kind: Rule
       services:
         - name: hubble-ui
           port: 80
+  tls: {}
