@@ -1,28 +1,35 @@
+# Tier 2 — infra stack master. One Application per app.
+# Helm pattern: two sources — upstream chart + this repo with `ref: values`
+#               so the chart's valueFiles reads $values/infra/<app>/values.yaml.
+# Raw pattern:  single `source:` with `path: infra/<app>` pointing at manifests in this repo.
+---
 apiVersion: argoproj.io/v1alpha1
-kind: ApplicationSet
+kind: Application
 metadata:
-  name: infra
+  name: cilium
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
-  generators:
-    - git:
-        repoURL: https://github.com/RootButcher/homelab-apps
-        revision: HEAD
-        directories:
-          - path: infra/*
-  template:
-    metadata:
-      name: '{{path.basename}}'
-    spec:
-      project: default
-      source:
-        repoURL: https://github.com/RootButcher/homelab-apps
-        targetRevision: HEAD
-        path: '{{path}}'
-      destination:
-        server: https://kubernetes.default.svc
-        namespace: argocd
-      syncPolicy:
-        automated:
-          prune: true
-          selfHeal: true
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  sources:
+    - chart: cilium
+      repoURL: https://helm.cilium.io/
+      targetRevision: 1.16.5
+      helm:
+        valueFiles:
+          - $values/infra/cilium/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+      - CreateNamespace=true
