@@ -1,0 +1,17 @@
+# Talos kubelet uses a self-signed serving cert that metrics-server can't
+# verify against the cluster CA out of the box. Skip TLS verification on the
+# kubelet metrics endpoint. This is the standard Talos pattern; if/when we
+# wire metrics-server to trust the Talos kubelet CA explicitly, drop this arg.
+args:
+  - --kubelet-insecure-tls
+  - --kubelet-preferred-address-types=InternalIP
+
+replicas: 1
+
+# Resource footprint is small for our cluster size (~5 nodes, modest pod count).
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi

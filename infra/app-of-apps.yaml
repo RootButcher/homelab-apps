@@ -28,6 +28,15 @@ spec:
       targetRevision: HEAD
       ref: values
   syncPolicy:
+    # Rook-Ceph mons / OSDs / MGRs need hostPath volumes — Talos's cluster-default
+    # PodSecurity admission enforces `baseline`, which forbids hostPath. Label the
+    # operator namespace `privileged` so the operator's child workloads can be
+    # admitted. Argo's managedNamespaceMetadata updates these labels on every sync.
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged
+        pod-security.kubernetes.io/audit: privileged
     automated:
       prune: true
       selfHeal: true
@@ -298,6 +307,39 @@ spec:
       path: infra/argocd
       directory:
         include: "ingressroute*.yaml"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
+# metrics-server — implements the k8s Metrics API so `kubectl top {nodes,pods}`,
+# HPA basic mode, and Lens live-stats work. No history (live values only); the
+# full Prometheus story lives in the `logging` stack.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metrics-server
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  sources:
+    - chart: metrics-server
+      repoURL: https://kubernetes-sigs.github.io/metrics-server/
+      targetRevision: 3.12.2
+      helm:
+        valueFiles:
+          - $values/infra/metrics-server/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
   syncPolicy:
     automated:
       prune: true

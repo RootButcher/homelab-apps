@@ -26,3 +26,33 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+# logging stack — observability apps (Loki / log shipper, eventually Grafana,
+# metrics-server / prometheus-equiv, etc.). Separated from `infra` because the
+# observability layer depends on storage (rook-ceph / democratic-csi) provided
+# by `infra` and benefits from its own lifecycle.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: logging
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RootButcher/homelab-apps
+    targetRevision: HEAD
+    path: logging
+    directory:
+      recurse: false
+      include: "app-of-apps.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

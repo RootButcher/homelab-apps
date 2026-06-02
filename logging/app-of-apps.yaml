@@ -1,0 +1,41 @@
+# Tier 2 — logging stack master. One Application per app.
+#
+# Patterns to follow (copy from infra/app-of-apps.yaml when adding apps):
+#
+# Helm chart with values + extra raw manifests:
+#   sources:
+#     - chart: <name>
+#       repoURL: <chart repo URL>
+#       targetRevision: <chart version>
+#       helm:
+#         valueFiles:
+#           - $values/logging/<app>/values.yaml
+#     - repoURL: https://github.com/RootButcher/homelab-apps
+#       targetRevision: HEAD
+#       ref: values
+#     - repoURL: https://github.com/RootButcher/homelab-apps
+#       targetRevision: HEAD
+#       path: logging/<app>
+#       directory:
+#         include: "ingressroute*.yaml"
+#
+# Raw kustomize directory (good for apps that ship sops-encrypted secrets):
+#   source:
+#     repoURL: https://github.com/RootButcher/homelab-apps
+#     targetRevision: HEAD
+#     path: logging/<app>
+#     plugin:
+#       name: kustomize-sops
+#
+# Storage requirement: every logging-stack app that needs persistence should
+# request a PVC backed by either democratic-csi (TrueNAS) or rook-ceph (RBD)
+# from the `infra` stack. The `infra` stack is reconciled first by ordering of
+# Application creation; if a logging app starts before its storage class
+# exists, the PVC will be Pending until rook-ceph mons come up.
+#
+# Planned apps for this stack (uncomment / fill in as added):
+# - loki (or victorialogs) — log store
+# - grafana — log + future-metrics visualization
+# - alloy / vector — log receiver for Talos's machine.logging.destinations
+#   (Talos pushes JSON over TCP/HTTP — no DaemonSet log scraper needed)
+# - metrics-server — if not placed in `infra` stack
