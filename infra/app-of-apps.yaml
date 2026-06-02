@@ -234,7 +234,7 @@ spec:
   sources:
     - chart: cert-manager
       repoURL: https://charts.jetstack.io
-      targetRevision: v1.16.2
+      targetRevision: v1.20.2
       helm:
         valueFiles:
           - $values/infra/cert-manager/values.yaml
