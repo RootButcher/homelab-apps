@@ -8,13 +8,23 @@ spec:
     image: quay.io/ceph/ceph:v18.2.4
   dataDirHostPath: /var/lib/rook
   mon:
-    count: 3
+    count: 5
     allowMultiplePerNode: false
   mgr:
     count: 2
   dashboard:
     enabled: true
     ssl: false
+  # Allow every Ceph daemon (mon, mgr, osd, mds, rgw, crashcollector) to land
+  # on control-plane nodes as well as workers. Without this toleration the
+  # control-plane taint blocks mon scheduling, so a 5-mon spread across all
+  # 5 nodes is impossible and quorum never forms.
+  placement:
+    all:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
   storage:
     useAllNodes: true
     useAllDevices: false
