@@ -26,6 +26,34 @@ spec:
     syncOptions:
       - CreateNamespace=true
 ---
+# test stack — 
+# Lives outside `infra` so it can be pruned/deleted 
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: test
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RootButcher/homelab-apps
+    targetRevision: HEAD
+    path: test
+    directory:
+      recurse: false
+      include: "app-of-apps.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
 # logging stack — observability apps Separated from `infra` because the
 # observability layer depends on storage (rook-ceph / democratic-csi) provided
 # by `infra` and benefits from its own lifecycle.

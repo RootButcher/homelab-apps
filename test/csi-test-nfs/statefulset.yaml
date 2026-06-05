@@ -1,0 +1,37 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: csi-test-nfs-sts
+  namespace: test
+spec:
+  serviceName: csi-test-nfs-sts
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-test-nfs-sts
+  template:
+    metadata:
+      labels:
+        app: csi-test-nfs-sts
+    spec:
+      containers:
+        - name: writer
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - 'date >> /data/log; tail -f /data/log'
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: truenas-nfs
+        resources:
+          requests:
+            storage: 1Gi
