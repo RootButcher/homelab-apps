@@ -12,13 +12,14 @@ spec:
     allowMultiplePerNode: false
   mgr:
     count: 2
+    modules:
+      - name: rook
+        enabled: true
   dashboard:
     enabled: true
     ssl: false
   # Allow every Ceph daemon (mon, mgr, osd, mds, rgw, crashcollector) to land
-  # on control-plane nodes as well as workers. Without this toleration the
-  # control-plane taint blocks mon scheduling, so a 5-mon spread across all
-  # 5 nodes is impossible and quorum never forms.
+  # on control-plane nodes as well as workers.
   placement:
     all:
       tolerations:
