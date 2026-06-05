@@ -5,7 +5,7 @@ metadata:
   namespace: rook-ceph
 spec:
   cephVersion:
-    image: quay.io/ceph/ceph:v18.2.4
+    image: quay.io/ceph/ceph:v20.2.1  # bump from v18.2.4 TODO updater
   dataDirHostPath: /var/lib/rook
   mon:
     count: 3

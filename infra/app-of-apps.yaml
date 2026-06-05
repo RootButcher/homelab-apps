@@ -2,6 +2,7 @@
 # Helm pattern: chart + ref:values for valueFiles, plus a 3rd repo source
 #               pulling raw IngressRoute(s) co-located with the values file.
 # Raw pattern:  single `source:` with `path: infra/<app>` pointing at manifests.
+# TODO updater
 ---
 # Rook-Ceph operator (helm). The CephCluster + StorageClass live in the
 # rook-ceph-cluster Application so cluster-config edits don't churn the operator.
@@ -20,7 +21,7 @@ spec:
   sources:
     - chart: rook-ceph
       repoURL: https://charts.rook.io/release
-      targetRevision: v1.15.5
+      targetRevision: v1.20.0  # bump from v1.15.5 TODO updater
       helm:
         valueFiles:
           - $values/infra/rook-ceph/values.yaml
@@ -86,7 +87,7 @@ spec:
   sources:
     - chart: democratic-csi
       repoURL: https://democratic-csi.github.io/charts/
-      targetRevision: 0.14.7
+      targetRevision: 0.15.1  # bump from 0.14.7 TODO updater
       helm:
         valueFiles:
           - $values/infra/democratic-csi-iscsi/values.yaml
@@ -116,7 +117,7 @@ spec:
   sources:
     - chart: democratic-csi
       repoURL: https://democratic-csi.github.io/charts/
-      targetRevision: 0.14.7
+      targetRevision: 0.15.1  # bump from 0.14.7 TODO updater
       helm:
         valueFiles:
           - $values/infra/democratic-csi-nfs/values.yaml
@@ -171,7 +172,7 @@ spec:
   sources:
     - chart: cilium
       repoURL: https://helm.cilium.io/
-      targetRevision: 1.16.5
+      targetRevision: 1.19.4  # bump from 1.16.5 TODO updater
       helm:
         valueFiles:
           - $values/infra/cilium/values.yaml
@@ -295,7 +296,7 @@ spec:
   sources:
     - chart: argo-cd
       repoURL: https://argoproj.github.io/argo-helm
-      targetRevision: 7.8.26
+      targetRevision: 9.5.19  # bump from 7.8.26 TODO updater
       helm:
         valueFiles:
           - $values/infra/argocd/values.yaml
@@ -333,7 +334,7 @@ spec:
   sources:
     - chart: metrics-server
       repoURL: https://kubernetes-sigs.github.io/metrics-server/
-      targetRevision: 3.12.2
+      targetRevision: 3.13.1  # bump from 3.12.2 TODO updater
       helm:
         valueFiles:
           - $values/infra/metrics-server/values.yaml
@@ -363,7 +364,7 @@ spec:
   sources:
     - chart: traefik
       repoURL: https://traefik.github.io/charts
-      targetRevision: 32.0.0
+      targetRevision: 40.2.0  # bump from 32.0.0 TODO updater
       helm:
         valueFiles:
           - $values/infra/traefik/values.yaml
