@@ -96,7 +96,7 @@ spec:
   source:
     repoURL: https://github.com/RootButcher/homelab-apps
     targetRevision: HEAD
-    path: infra/democratic-csi
+    path: infra/democratic-csi/token
     plugin:
       name: kustomize-sops
   syncPolicy:
@@ -125,7 +125,7 @@ spec:
       targetRevision: 0.15.1  # bump from 0.14.7 TODO updater
       helm:
         valueFiles:
-          - $values/infra/democratic-csi-iscsi/values.yaml
+          - $values/infra/democratic-csi/iscsi/values.yaml
     - repoURL: https://github.com/RootButcher/homelab-apps
       targetRevision: HEAD
       ref: values
@@ -155,7 +155,7 @@ spec:
       targetRevision: 0.15.1  # bump from 0.14.7 TODO updater
       helm:
         valueFiles:
-          - $values/infra/democratic-csi-nfs/values.yaml
+          - $values/infra/democratic-csi/nfs/values.yaml
     - repoURL: https://github.com/RootButcher/homelab-apps
       targetRevision: HEAD
       ref: values
@@ -222,13 +222,13 @@ spec:
       targetRevision: 1.19.4  # bump from 1.16.5 TODO updater
       helm:
         valueFiles:
-          - $values/infra/cilium/values.yaml
+          - $values/infra/cilium/chart/values.yaml
     - repoURL: https://github.com/RootButcher/homelab-apps
       targetRevision: HEAD
       ref: values
     - repoURL: https://github.com/RootButcher/homelab-apps
       targetRevision: HEAD
-      path: infra/cilium
+      path: infra/cilium/chart
       directory:
         include: "ingressroute*.yaml"
   syncPolicy:
@@ -258,7 +258,7 @@ spec:
   source:
     repoURL: https://github.com/RootButcher/homelab-apps
     targetRevision: HEAD
-    path: infra/cilium-lb-ipam
+    path: infra/cilium/lb-ipam
   syncPolicy:
     automated:
       prune: true
@@ -285,7 +285,7 @@ spec:
       targetRevision: v1.20.2
       helm:
         valueFiles:
-          - $values/infra/cert-manager/values.yaml
+          - $values/infra/cert-manager/chart/values.yaml
     - repoURL: https://github.com/RootButcher/homelab-apps
       targetRevision: HEAD
       ref: values
@@ -313,7 +313,7 @@ spec:
   source:
     repoURL: https://github.com/RootButcher/homelab-apps
     targetRevision: HEAD
-    path: infra/cert-manager-config
+    path: infra/cert-manager/config
     plugin:
       name: kustomize-sops
   syncPolicy:
