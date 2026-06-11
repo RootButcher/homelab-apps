@@ -31,6 +31,47 @@ cephClusterSpec:
     config:
       osdsPerDevice: "1"
 
+  # Tight resource caps so daemons fit on the 4 GiB Talos nodes. Rook 1.20
+  # defaults (osd 4Gi request) overflow these nodes; values below mirror what
+  # a small dev cluster typically uses.
+  resources:
+    osd:
+      requests:
+        cpu: "250m"
+        memory: "1Gi"
+      limits:
+        memory: "2Gi"
+    mon:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        memory: "1Gi"
+    mgr:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        memory: "1Gi"
+    crashcollector:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        memory: "128Mi"
+    exporter:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        memory: "128Mi"
+    prepareosd:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        memory: "1Gi"
+
 cephBlockPools:
   - name: replicapool
     spec:
@@ -69,6 +110,12 @@ cephFileSystems:
       metadataServer:
         activeCount: 1
         activeStandby: true
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+          limits:
+            memory: "1Gi"
     storageClass:
       enabled: true
       name: rook-cephfs
