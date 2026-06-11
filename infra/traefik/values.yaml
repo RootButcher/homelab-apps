@@ -14,19 +14,21 @@ ports:
     protocol: TCP
     expose:
       default: true
-    # Anything that hits :80 gets a 308 to https://. IngressRoutes only need
-    # to listen on websecure.
-    redirectTo:
-      port: websecure
-      scheme: https
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
   websecure:
     port: 8443
     exposedPort: 443
     protocol: TCP
     expose:
       default: true
-    tls:
-      enabled: true
+    http:
+      tls:
+        enabled: true
 
 providers:
   kubernetesIngress:
