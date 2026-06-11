@@ -4,8 +4,11 @@
 # Raw pattern:  single `source:` with `path: infra/<app>` pointing at manifests.
 # TODO updater
 ---
-# Rook-Ceph operator (helm). The CephCluster + StorageClass live in the
-# rook-ceph-cluster Application so cluster-config edits don't churn the operator.
+# Rook-Ceph: official 3-chart install per
+# https://rook.io/docs/rook/latest-release/Helm-Charts/helm-charts/
+#   1. rook-ceph         (operator, this Application)
+#   2. ceph-csi-drivers  (CSI driver CRs, next Application)
+#   3. rook-ceph-cluster (CephCluster + pools + StorageClasses)
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -24,7 +27,7 @@ spec:
       targetRevision: v1.20.0  # bump from v1.15.5 TODO updater
       helm:
         valueFiles:
-          - $values/infra/rook-ceph/values.yaml
+          - $values/infra/rook/operator/values.yaml
     - repoURL: https://github.com/RootButcher/homelab-apps
       targetRevision: HEAD
       ref: values
@@ -38,6 +41,38 @@ spec:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/warn: privileged
         pod-security.kubernetes.io/audit: privileged
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
+# Ceph-CSI drivers — RBD + CephFS Driver CRs reconciled by the
+# ceph-csi-operator that the rook-ceph chart's subchart installed.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ceph-csi-drivers
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rook-ceph
+  sources:
+    - chart: ceph-csi-drivers
+      repoURL: https://ceph.github.io/ceph-csi-operator
+      targetRevision: 1.0.1
+      helm:
+        valueFiles:
+          - $values/infra/rook/ceph-csi-drivers/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+  syncPolicy:
     automated:
       prune: true
       selfHeal: true
@@ -132,7 +167,8 @@ spec:
       - ServerSideApply=true
       - CreateNamespace=true
 ---
-# CephCluster CR + CephBlockPool + StorageClass.
+# CephCluster + CephBlockPool + CephFilesystem + StorageClasses via helm chart.
+# Dashboard IngressRoute is a 3rd source so it stays co-located with values.yaml.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -145,10 +181,21 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: rook-ceph
-  source:
-    repoURL: https://github.com/RootButcher/homelab-apps
-    targetRevision: HEAD
-    path: infra/rook-ceph-cluster
+  sources:
+    - chart: rook-ceph-cluster
+      repoURL: https://charts.rook.io/release
+      targetRevision: v1.20.0  # bump from v1.15.5 TODO updater
+      helm:
+        valueFiles:
+          - $values/infra/rook/cluster/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: infra/rook/cluster
+      directory:
+        include: "ingressroute*.yaml"
   syncPolicy:
     automated:
       prune: true

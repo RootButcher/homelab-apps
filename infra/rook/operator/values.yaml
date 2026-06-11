@@ -2,8 +2,7 @@ crds:
   enabled: true
 
 csi:
-  enableRbdDriver: true
-  enableCephfsDriver: false
+  installCsiOperator: true
   serviceMonitor:
     enabled: false
 
