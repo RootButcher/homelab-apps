@@ -48,6 +48,15 @@ spec:
       directory:
         include: "ingressroute*.yaml"
   syncPolicy:
+    # node-exporter is a DaemonSet that needs hostNetwork/hostPID/hostPath +
+    # hostPort 9100. Talos cluster-default PodSecurity enforces `baseline`,
+    # which forbids all of those. Label the namespace `privileged` so the
+    # DaemonSet pods are admitted. Same fix as the rook-ceph Application.
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged
+        pod-security.kubernetes.io/audit: privileged
     automated:
       prune: true
       selfHeal: true
