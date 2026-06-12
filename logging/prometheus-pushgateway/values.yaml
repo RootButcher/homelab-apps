@@ -1,0 +1,13 @@
+# prometheus-pushgateway values.
+#
+# In-cluster DNS: http://prometheus-pushgateway.monitoring.svc:9091
+# This is the URL the homelab-ci CronJob will pass to `--gateway`.
+
+serviceMonitor:
+  enabled: true
+
+# Pushed metrics live in the Pushgateway only between scrapes — Prometheus
+# is the durable store. Losing them on pod restart is fine; a re-push from
+# the next CronJob run replaces them.
+persistentVolume:
+  enabled: false

@@ -1,0 +1,52 @@
+# kube-prometheus-stack values.
+#
+# We ship our own Traefik IngressRoutes (sibling ingressroute.yaml), so all
+# chart-side ingress knobs are left disabled (chart default).
+
+prometheus:
+  prometheusSpec:
+    retention: 30d
+    # Required for the prometheus-pushgateway ServiceMonitor (separate
+    # Application) to be picked up — chart default is `true`, which scopes
+    # the Operator to ServiceMonitors that carry the chart's release label.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    scrapeConfigSelectorNilUsesHelmValues: false
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: rook-ceph-block
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+
+alertmanager:
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: rook-ceph-block
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 5Gi
+
+grafana:
+  persistence:
+    enabled: true
+    type: pvc
+    storageClassName: rook-ceph-block
+    accessModes: ["ReadWriteOnce"]
+    size: 10Gi
+  # Loki datasource — registered here so it appears in Grafana with no manual
+  # click-through. URL is the loki chart's gateway Service in the same ns.
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki-gateway.monitoring.svc.cluster.local
+      jsonData:
+        maxLines: 1000

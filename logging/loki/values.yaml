@@ -1,0 +1,50 @@
+# Loki — single-binary mode. Homelab scale; distributed mode is for >1TB/day.
+# Object storage (S3-compatible) is the long-term backend; until we stand up
+# Rook-Ceph RGW or point at TrueNAS MinIO, filesystem PVC on rook-ceph-block
+# is fine.
+
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: true
+    storageClass: rook-ceph-block
+    accessModes: ["ReadWriteOnce"]
+    size: 50Gi
+
+# Disable the components that exist only for distributed mode so the chart
+# doesn't render their (now-redundant) PVCs / Deployments.
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+
+# Disable the bundled test / canary / chunks-cache / results-cache; Grafana
+# is the UI and we don't need cache pods at this scale.
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+test:
+  enabled: false
+lokiCanary:
+  enabled: false

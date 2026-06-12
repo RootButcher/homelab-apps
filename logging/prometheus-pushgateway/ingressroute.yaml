@@ -1,0 +1,15 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: prometheus-pushgateway
+  namespace: monitoring
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`pushgateway.local.rootbutcher.dev`)
+      kind: Rule
+      services:
+        - name: prometheus-pushgateway
+          port: 9091
+  tls: {}

@@ -1,0 +1,43 @@
+# Alloy — log receiver for Talos's machine.logging.destinations.
+#
+# Talos pushes JSON-lines log records over TCP (or HTTP) to a configured
+# destination. Alloy's `loki.source.api` accepts the Loki push protocol;
+# Talos's JSON destination talks Loki push when pointed at /loki/api/v1/push,
+# so we expose that path here and forward to the Loki gateway in this ns.
+#
+# See https://www.talos.dev/latest/talos-guides/configuration/logging/ —
+# Talos `machine.logging.destinations` config goes in tofu/, as a follow-up
+# once this Service DNS exists.
+
+controller:
+  type: deployment
+  replicas: 2
+
+alloy:
+  configMap:
+    create: true
+    content: |-
+      loki.source.api "talos" {
+        http {
+          listen_address = "0.0.0.0"
+          listen_port    = 3500
+        }
+        forward_to = [loki.write.default.receiver]
+        labels     = { source = "talos" }
+      }
+
+      loki.write "default" {
+        endpoint {
+          url = "http://loki-gateway.monitoring.svc.cluster.local/loki/api/v1/push"
+        }
+      }
+
+  extraPorts:
+    - name: talos-logs
+      port: 3500
+      targetPort: 3500
+      protocol: TCP
+
+service:
+  enabled: true
+  type: ClusterIP

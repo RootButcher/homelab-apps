@@ -1,41 +1,159 @@
 # Tier 2 — logging stack master. One Application per app.
 #
-# Patterns to follow (copy from infra/app-of-apps.yaml when adding apps):
+# Patterns mirror apps/infra/app-of-apps.yaml:
+#   - helm chart with co-located IngressRoute → three sources (chart,
+#     ref:values, raw 'ingressroute*.yaml' directory).
+#   - helm chart, values only → two sources (chart + ref:values).
 #
-# Helm chart with values + extra raw manifests:
-#   sources:
-#     - chart: <name>
-#       repoURL: <chart repo URL>
-#       targetRevision: <chart version>
-#       helm:
-#         valueFiles:
-#           - $values/logging/<app>/values.yaml
-#     - repoURL: https://github.com/RootButcher/homelab-apps
-#       targetRevision: HEAD
-#       ref: values
-#     - repoURL: https://github.com/RootButcher/homelab-apps
-#       targetRevision: HEAD
-#       path: logging/<app>
-#       directory:
-#         include: "ingressroute*.yaml"
+# Storage: PVCs use `rook-ceph-block` from the infra stack's rook-ceph-cluster.
+# The infra stack's Tier-1 Application is reconciled before this one (file
+# ordering in apps/app-of-apps.yaml), so by the time these apps come up
+# rook-ceph block has its StorageClass registered.
 #
-# Raw kustomize directory (good for apps that ship sops-encrypted secrets):
-#   source:
-#     repoURL: https://github.com/RootButcher/homelab-apps
-#     targetRevision: HEAD
-#     path: logging/<app>
-#     plugin:
-#       name: kustomize-sops
-#
-# Storage requirement: every logging-stack app that needs persistence should
-# request a PVC backed by either democratic-csi (TrueNAS) or rook-ceph (RBD)
-# from the `infra` stack. The `infra` stack is reconciled first by ordering of
-# Application creation; if a logging app starts before its storage class
-# exists, the PVC will be Pending until rook-ceph mons come up.
-#
-# Planned apps for this stack (uncomment / fill in as added):
-# - loki (or victorialogs) — log store
-# - grafana — log + future-metrics visualization
-# - alloy / vector — log receiver for Talos's machine.logging.destinations
-#   (Talos pushes JSON over TCP/HTTP — no DaemonSet log scraper needed)
-# - metrics-server — if not placed in `infra` stack
+# Out of scope for this pass (called out so they aren't forgotten):
+#   - Talos machine.logging.destinations edit (lives in tofu/), pointed at
+#     the Alloy Service. Done after Alloy's Service DNS exists.
+#   - Loki object-storage backend; filesystem PVC is the v1.
+#   - Pod-log DaemonSet; Talos node logs first via Alloy receiver.
+#   - SOPS-encrypted Grafana admin secret; first install uses the
+#     chart-generated password.
+---
+# kube-prometheus-stack — Prometheus Operator + Prometheus + Alertmanager +
+# Grafana + node-exporter + kube-state-metrics. Single Helm release.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  sources:
+    - chart: kube-prometheus-stack
+      repoURL: https://prometheus-community.github.io/helm-charts
+      targetRevision: 86.2.2
+      helm:
+        valueFiles:
+          - $values/logging/kube-prometheus-stack/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: logging/kube-prometheus-stack
+      directory:
+        include: "ingressroute*.yaml"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
+# prometheus-pushgateway — endpoint the homelab-ci fio CLI pushes to with
+# `--gateway`. ServiceMonitor wires it back into the kube-prometheus-stack
+# Prometheus, so metrics flow: CLI → Pushgateway → Prometheus → Grafana.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-pushgateway
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  sources:
+    - chart: prometheus-pushgateway
+      repoURL: https://prometheus-community.github.io/helm-charts
+      targetRevision: 3.6.1
+      helm:
+        valueFiles:
+          - $values/logging/prometheus-pushgateway/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: logging/prometheus-pushgateway
+      directory:
+        include: "ingressroute*.yaml"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
+# Loki — single-binary mode, filesystem storage on rook-ceph-block.
+# Grafana datasource is registered via kube-prometheus-stack values.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  sources:
+    - chart: loki
+      repoURL: https://grafana.github.io/helm-charts
+      targetRevision: 6.55.0
+      helm:
+        valueFiles:
+          - $values/logging/loki/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
+# Alloy — log receiver for Talos's machine.logging.destinations push.
+# Deployment (not DaemonSet); two pods behind a ClusterIP Service so Talos
+# nodes have a stable target. Forwards to Loki.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alloy
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  sources:
+    - chart: alloy
+      repoURL: https://grafana.github.io/helm-charts
+      targetRevision: 1.10.0
+      helm:
+        valueFiles:
+          - $values/logging/alloy/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
