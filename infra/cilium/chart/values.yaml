@@ -33,6 +33,15 @@ securityContext:
 
 operator:
   replicas: 1
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+prometheus:
+  enabled: true
+  serviceMonitor:
+    enabled: true
 
 # L2 announcements + LB IPAM (lbIPAM is enabled by default in 1.16)
 l2announcements:
@@ -53,3 +62,13 @@ hubble:
     service:
       type: NodePort
       nodePort: 30090
+  metrics:
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - icmp
+      - http
+    serviceMonitor:
+      enabled: true

@@ -4,14 +4,40 @@ server:
     nodePorts:
       http: 30080
       https: 30443
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
 
 configs:
   params:
     server.insecure: "true"
 
+controller:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+applicationSet:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+notifications:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
 # KSOPS sidecar (CMP) — decrypts SOPS-encrypted Secrets at sync time using the
 # age private key mounted from the sops-age Secret in this namespace.
 repoServer:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
   volumes:
     - name: cmp-tmp
       emptyDir: {}

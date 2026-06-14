@@ -4,7 +4,9 @@ crds:
 replicaCount: 1
 
 prometheus:
-  enabled: false
+  enabled: true
+  servicemonitor:
+    enabled: true
 
 # Split DNS workaround.
 extraArgs:

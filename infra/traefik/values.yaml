@@ -42,6 +42,15 @@ ingressClass:
   enabled: true
   isDefaultClass: true
 
+metrics:
+  prometheus:
+    service:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      namespaceSelector:
+        any: true
+
 # Disable the chart's built-in dashboard IngressRoute. The chart renders an empty
 # metadata.annotations map that k8s strips on storage, causing permanent ArgoCD drift.
 # We define our own dashboard route in apps/infra/ingress-routes/traefik-dashboard.yaml.

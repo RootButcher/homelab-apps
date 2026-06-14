@@ -3,6 +3,9 @@ operatorNamespace: rook-ceph
 toolbox:
   enabled: true
 
+monitoring:
+  enabled: true
+
 cephClusterSpec:
   cephVersion:
     image: quay.io/ceph/ceph:v20.2.1  # bump from v18.2.4 TODO updater

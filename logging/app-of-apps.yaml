@@ -16,36 +16,6 @@
 #   - Loki object-storage backend; filesystem PVC is the v1.
 #   - Pod-log DaemonSet; Talos node logs first via Alloy receiver.
 ---
-# grafana-admin — SOPS-encrypted Secret consumed by kube-prometheus-stack's
-# `grafana.admin.existingSecret`. Lives in its own Application so the Helm
-# release stays vanilla multi-source and this stays kustomize-sops typed.
-# Must reconcile before kube-prometheus-stack on first install.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: grafana-admin
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: monitoring
-  source:
-    repoURL: https://github.com/RootButcher/homelab-apps
-    targetRevision: HEAD
-    path: logging/grafana-admin
-    plugin:
-      name: kustomize-sops
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
 # kube-prometheus-stack — Prometheus Operator + Prometheus + Alertmanager +
 # Grafana + node-exporter + kube-state-metrics. Single Helm release.
 apiVersion: argoproj.io/v1alpha1
