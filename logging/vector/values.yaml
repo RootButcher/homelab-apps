@@ -77,8 +77,13 @@ customConfig:
       endpoint: http://loki-gateway.monitoring.svc.cluster.local
       encoding:
         codec: json
+      # The vector chart wraps customConfig in helm's `tpl` function, so any
+      # `{{ ... }}` we put here is evaluated as a Go template at render time
+      # and fails because the field names aren't helm functions. Escape with
+      # raw-string backticks so helm emits literal `{{ field }}` for Vector
+      # to interpolate at runtime.
       labels:
-        source:  "{{ source }}"
-        service: "{{ service }}"
-        level:   "{{ level }}"
-        node:    "{{ node }}"
+        source:  '{{ `{{ source }}` }}'
+        service: '{{ `{{ service }}` }}'
+        level:   '{{ `{{ level }}` }}'
+        node:    '{{ `{{ node }}` }}'
