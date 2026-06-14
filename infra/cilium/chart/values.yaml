@@ -37,11 +37,22 @@ operator:
     enabled: true
     serviceMonitor:
       enabled: true
+  dashboards:
+    enabled: true
+    label: grafana_dashboard
+    labelValue: "1"
 
 prometheus:
   enabled: true
   serviceMonitor:
     enabled: true
+
+# Cilium agent dashboard ConfigMap, picked up by the kube-prometheus-stack
+# grafana sidecar (LABEL=grafana_dashboard, NAMESPACE=ALL).
+dashboards:
+  enabled: true
+  label: grafana_dashboard
+  labelValue: "1"
 
 # L2 announcements + LB IPAM (lbIPAM is enabled by default in 1.16)
 l2announcements:
@@ -72,3 +83,7 @@ hubble:
       - http
     serviceMonitor:
       enabled: true
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"

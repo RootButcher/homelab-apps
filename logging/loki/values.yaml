@@ -58,3 +58,14 @@ test:
   enabled: false
 lokiCanary:
   enabled: false
+
+# Loki mixin: dashboards (read/write/operational), recording rules, alerts.
+# Picked up by the kube-prometheus-stack grafana sidecar.
+monitoring:
+  dashboards:
+    enabled: true
+    labels:
+      grafana_dashboard: "1"
+  rules:
+    enabled: true
+    alerting: true

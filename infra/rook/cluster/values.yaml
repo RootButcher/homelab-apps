@@ -5,6 +5,7 @@ toolbox:
 
 monitoring:
   enabled: true
+  createPrometheusRules: true
 
 cephClusterSpec:
   cephVersion:
