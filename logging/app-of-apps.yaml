@@ -11,10 +11,8 @@
 # rook-ceph block has its StorageClass registered.
 #
 # Out of scope for this pass (called out so they aren't forgotten):
-#   - Talos machine.logging.destinations edit (lives in tofu/), pointed at
-#     the Alloy Service. Done after Alloy's Service DNS exists.
 #   - Loki object-storage backend; filesystem PVC is the v1.
-#   - Pod-log DaemonSet; Talos node logs first via Alloy receiver.
+#   - Pod-log DaemonSet; needs a per-node Vector or Alloy DS scraping kubelet.
 ---
 # kube-prometheus-stack — Prometheus Operator + Prometheus + Alertmanager +
 # Grafana + node-exporter + kube-state-metrics. Single Helm release.
@@ -132,13 +130,19 @@ spec:
       - ServerSideApply=true
       - CreateNamespace=true
 ---
-# Alloy — log receiver for Talos's machine.logging.destinations push.
-# Deployment (not DaemonSet); two pods behind a ClusterIP Service so Talos
-# nodes have a stable target. Forwards to Loki.
+# Vector — log receiver for Talos's machine.logging.destinations push.
+# Aggregator (Deployment) behind a LoadBalancer Service pinned to 10.0.11.105
+# via Cilium LB IPAM. Two TCP listeners: 5514 for service logs, 5044 for
+# kernel logs (the latter paired with Talos `talos.logging.kernel=` kernel
+# cmdline arg set in tofu). Forwards both to loki-gateway.
+#
+# Why Vector and not Alloy: Talos emits raw newline-delimited JSON over TCP,
+# which Alloy's loki.source.api (HTTP) cannot accept. Vector's socket source
+# with `decoding.codec: json` is purpose-built for this.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: alloy
+  name: vector
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -148,12 +152,12 @@ spec:
     server: https://kubernetes.default.svc
     namespace: monitoring
   sources:
-    - chart: alloy
-      repoURL: https://grafana.github.io/helm-charts
-      targetRevision: 1.10.0
+    - chart: vector
+      repoURL: https://helm.vector.dev
+      targetRevision: 0.56.0
       helm:
         valueFiles:
-          - $values/logging/alloy/values.yaml
+          - $values/logging/vector/values.yaml
     - repoURL: https://github.com/RootButcher/homelab-apps
       targetRevision: HEAD
       ref: values

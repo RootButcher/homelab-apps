@@ -1,0 +1,84 @@
+# Vector aggregator — Talos node log receiver.
+#
+# Two TCP listeners, both speaking newline-delimited JSON (Talos's only
+# wire format):
+#   - 5514: machine.logging.destinations (service logs — kubelet, etcd,
+#           machined, apid, etc.)
+#   - 5044: talos.logging.kernel kernel cmdline arg (dmesg / kmsg)
+#
+# Talos pushes from each node to the Service IP. LB-pinned to 10.0.11.105 from
+# homelab-lb-pool so the tofu machine config has a stable target across
+# re-applies. Same VLAN as the nodes — L2 ARP resolves without UDM static
+# routes.
+#
+# Aggregator role => StatefulSet (chart default for this role).
+
+role: Aggregator
+replicas: 2
+
+service:
+  enabled: true
+  type: LoadBalancer
+  annotations:
+    lbipam.cilium.io/ips: "10.0.11.105"
+  ports:
+    - name: talos-services
+      port: 5514
+      targetPort: 5514
+      protocol: TCP
+    - name: talos-kernel
+      port: 5044
+      targetPort: 5044
+      protocol: TCP
+
+customConfig:
+  data_dir: /vector-data-dir
+  api:
+    enabled: true
+    address: 0.0.0.0:8686
+  sources:
+    talos_services:
+      type: socket
+      mode: tcp
+      address: 0.0.0.0:5514
+      decoding:
+        codec: json
+      framing:
+        method: newline_delimited
+    talos_kernel:
+      type: socket
+      mode: tcp
+      address: 0.0.0.0:5044
+      decoding:
+        codec: json
+      framing:
+        method: newline_delimited
+  transforms:
+    label_services:
+      type: remap
+      inputs: [talos_services]
+      source: |
+        .source = "talos-service"
+        .service = del(."talos-service") ?? "unknown"
+        .level   = del(."talos-level") ?? "info"
+        .node    = .host
+    label_kernel:
+      type: remap
+      inputs: [talos_kernel]
+      source: |
+        .source   = "talos-kernel"
+        .facility = del(.facility) ?? "kern"
+        .level    = del(."talos-level") ?? "info"
+        .node     = .host
+  sinks:
+    loki:
+      type: loki
+      inputs: [label_services, label_kernel]
+      endpoint: http://loki-gateway.monitoring.svc.cluster.local
+      encoding:
+        codec: json
+      labels:
+        source:  "{{ source }}"
+        service: "{{ service }}"
+        level:   "{{ level }}"
+        node:    "{{ node }}"
