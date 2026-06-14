@@ -59,16 +59,16 @@ customConfig:
       inputs: [talos_services]
       source: |
         .source = "talos-service"
-        .service = del(."talos-service") ?? "unknown"
-        .level   = del(."talos-level") ?? "info"
+        .service = del(."talos-service") || "unknown"
+        .level   = del(."talos-level") || "info"
         .node    = .host
     label_kernel:
       type: remap
       inputs: [talos_kernel]
       source: |
         .source   = "talos-kernel"
-        .facility = del(.facility) ?? "kern"
-        .level    = del(."talos-level") ?? "info"
+        .facility = del(.facility) || "kern"
+        .level    = del(."talos-level") || "info"
         .node     = .host
   sinks:
     loki:
