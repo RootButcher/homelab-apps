@@ -1,0 +1,17 @@
+# Grafana dashboards for ArgoCD.
+# Pinned upstream: https://github.com/adinhodovic/argo-cd-mixin/tree/0307c781c146/dashboards_out
+# Refresh: re-download all three JSON files at a newer commit and bump the SHA above.
+# TODO updater
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+configMapGenerator:
+  - name: argocd-dashboards
+    files:
+      - argo-cd-application-overview.json
+      - argo-cd-operational-overview.json
+      - argo-cd-notifications-overview.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"

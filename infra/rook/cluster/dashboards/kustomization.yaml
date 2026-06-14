@@ -1,0 +1,22 @@
+# Grafana dashboards for Ceph (rook-ceph-cluster).
+# Pinned upstream: https://github.com/ceph/ceph/tree/ca0bc48a2a27/monitoring/ceph-mixin/dashboards_out
+# This is a curated subset of the 20-dashboard ceph-mixin. Add more by dropping
+# the JSON file in this directory and listing it under files: below.
+# Refresh: re-download all JSON files at a newer commit and bump the SHA above.
+# TODO updater
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+configMapGenerator:
+  - name: ceph-dashboards
+    files:
+      - ceph-cluster.json
+      - host-details.json
+      - hosts-overview.json
+      - osds-overview.json
+      - pool-overview.json
+      - rbd-overview.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
