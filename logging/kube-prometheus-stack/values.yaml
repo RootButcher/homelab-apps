@@ -35,6 +35,21 @@ alertmanager:
               storage: 5Gi
 
 grafana:
+  # Admin credentials come from the SOPS-encrypted `grafana-admin` Secret
+  # (apps/logging/grafana-admin/). Pinning this stops the chart from
+  # regenerating a random password into the chart-default Secret on every
+  # render, which drifts from Grafana's sqlite admin record on each ArgoCD
+  # sync and locks us out of the UI.
+  # TODO: rotate the placeholder `changeme` password in grafana-admin.sops.yaml.
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  # RWO PVC + chart-default RollingUpdate strategy deadlocks rollouts: the new
+  # pod cannot attach the volume while the old pod still holds it. Switch to
+  # Recreate so the old pod terminates first.
+  deploymentStrategy:
+    type: Recreate
   persistence:
     enabled: true
     type: pvc

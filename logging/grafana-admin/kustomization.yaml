@@ -1,0 +1,7 @@
+# TODO: rotate `admin-password` away from the placeholder `changeme` before
+# exposing Grafana beyond the homelab. Edit grafana-admin.sops.yaml via
+# `sops apps/logging/grafana-admin/grafana-admin.sops.yaml` and commit.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+generators:
+  - ksops-generator.yaml
