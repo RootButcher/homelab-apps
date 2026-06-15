@@ -1,7 +1,7 @@
 # Grafana dashboard for cert-manager.
-# Pinned upstream: https://github.com/imusmanmalik/cert-manager-mixin/tree/a5f74ad04be4/dashboards
-# (cert-manager has no official mixin; this is the community one.)
-# Refresh: re-download the JSON at a newer commit and bump the SHA above.
+# Source: https://grafana.com/grafana/dashboards/20842-cert-manager-kubernetes/ (revision 3)
+# (The previous imusmanmalik/cert-manager-mixin JSON was malformed upstream.)
+# Refresh: re-download a newer revision and bump the revision number above.
 # TODO updater
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -9,7 +9,7 @@ kind: Kustomization
 configMapGenerator:
   - name: cert-manager-dashboards
     files:
-      - cert-manager-overview.json
+      - cert-manager-kubernetes.json
     options:
       disableNameSuffixHash: true
       labels:
