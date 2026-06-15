@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graphite-exporter
+  labels:
+    app.kubernetes.io/name: graphite-exporter
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: graphite-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: graphite-exporter
+    spec:
+      containers:
+        - name: graphite-exporter
+          image: prom/graphite-exporter:v0.16.0
+          args:
+            - --graphite.mapping-config=/etc/graphite-exporter/graphite_mapping.conf
+          ports:
+            - name: graphite-tcp
+              containerPort: 9109
+              protocol: TCP
+            - name: graphite-udp
+              containerPort: 9109
+              protocol: UDP
+            - name: metrics
+              containerPort: 9108
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: metrics
+          livenessProbe:
+            httpGet:
+              path: /
+              port: metrics
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: mapping
+              mountPath: /etc/graphite-exporter
+              readOnly: true
+      volumes:
+        - name: mapping
+          configMap:
+            name: graphite-exporter-mapping

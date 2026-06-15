@@ -25,6 +25,10 @@ service:
       port: 5514
       targetPort: 5514
       protocol: TCP
+    - name: truenas-syslog
+      port: 514
+      targetPort: 5514
+      protocol: UDP
 
 customConfig:
   data_dir: /vector-data-dir
@@ -40,6 +44,10 @@ customConfig:
         codec: json
       framing:
         method: newline_delimited
+    truenas_syslog:
+      type: syslog
+      mode: udp
+      address: 0.0.0.0:5514
   transforms:
     label_services:
       type: remap
@@ -49,10 +57,17 @@ customConfig:
         .service = del(."talos-service") || "unknown"
         .level   = del(."talos-level") || "info"
         .node    = .host
+    label_truenas:
+      type: remap
+      inputs: [truenas_syslog]
+      source: |
+        .source = "truenas-syslog"
+        .node   = .hostname
+        .level  = .severity
   sinks:
     loki:
       type: loki
-      inputs: [label_services]
+      inputs: [label_services, label_truenas]
       endpoint: http://loki-gateway.monitoring.svc.cluster.local
       encoding:
         codec: json
@@ -62,7 +77,9 @@ customConfig:
       # raw-string backticks so helm emits literal `{{ field }}` for Vector
       # to interpolate at runtime.
       labels:
-        source:  '{{ `{{ source }}` }}'
-        service: '{{ `{{ service }}` }}'
-        level:   '{{ `{{ level }}` }}'
-        node:    '{{ `{{ node }}` }}'
+        source:   '{{ `{{ source }}` }}'
+        service:  '{{ `{{ service }}` }}'
+        level:    '{{ `{{ level }}` }}'
+        node:     '{{ `{{ node }}` }}'
+        appname:  '{{ `{{ appname }}` }}'
+        facility: '{{ `{{ facility }}` }}'

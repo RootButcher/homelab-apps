@@ -130,6 +130,34 @@ spec:
       - ServerSideApply=true
       - CreateNamespace=true
 ---
+# graphite-exporter — bridge between TrueNAS Reporting → Exporters (Graphite
+# line protocol push) and Prometheus. 
+# Receives on 10.0.11.106:9109 (Cilium LB), maps with the supporterino TrueNAS
+# mapping, exposes /metrics on 9108 scraped via ServiceMonitor.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: graphite-exporter
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  source:
+    repoURL: https://github.com/RootButcher/homelab-apps
+    targetRevision: HEAD
+    path: logging/graphite-exporter
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
 # Vector — log receiver for Talos's machine.logging.destinations push.
 # Aggregator (Deployment) behind a LoadBalancer Service pinned to 10.0.11.105
 # via Cilium LB IPAM. Two TCP listeners: 5514 for service logs, 5044 for

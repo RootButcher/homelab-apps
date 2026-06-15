@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: graphite-exporter
+  labels:
+    app.kubernetes.io/name: graphite-exporter
+  annotations:
+    lbipam.cilium.io/ips: "10.0.11.106"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: graphite-exporter
+  ports:
+    - name: graphite-tcp
+      port: 9109
+      targetPort: graphite-tcp
+      protocol: TCP
+    - name: graphite-udp
+      port: 9109
+      targetPort: graphite-udp
+      protocol: UDP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: graphite-exporter-metrics
+  labels:
+    app.kubernetes.io/name: graphite-exporter
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: graphite-exporter
+  ports:
+    - name: metrics
+      port: 9108
+      targetPort: metrics
+      protocol: TCP
