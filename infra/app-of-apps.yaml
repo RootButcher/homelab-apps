@@ -86,6 +86,8 @@ kind: Application
 metadata:
   name: democratic-csi
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -96,7 +98,7 @@ spec:
   source:
     repoURL: https://github.com/RootButcher/homelab-apps
     targetRevision: HEAD
-    path: infra/democratic-csi/token
+    path: infra/democratic-csi/secrets
     plugin:
       name: kustomize-sops
   syncPolicy:
@@ -305,7 +307,36 @@ spec:
       - ServerSideApply=true
       - CreateNamespace=true
 ---
-# ClusterIssuers + Cloudflare token (SOPS) + wildcard Certificate + default TLSStore.
+# Cloudflare API token (SOPS), consumed by the cert-manager ClusterIssuers.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager-secrets
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  source:
+    repoURL: https://github.com/RootButcher/homelab-apps
+    targetRevision: HEAD
+    path: infra/cert-manager/secrets
+    plugin:
+      name: kustomize-sops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+---
+# ClusterIssuers + wildcard Certificate + default TLSStore (plain manifests).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -322,8 +353,6 @@ spec:
     repoURL: https://github.com/RootButcher/homelab-apps
     targetRevision: HEAD
     path: infra/cert-manager/config
-    plugin:
-      name: kustomize-sops
   syncPolicy:
     automated:
       prune: true
