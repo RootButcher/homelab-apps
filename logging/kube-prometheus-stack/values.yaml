@@ -32,16 +32,25 @@ grafana:
     existingSecret: grafana-admin
     userKey: admin-user
     passwordKey: admin-password
-  # Two replicas behind a rolling update => zero-outage rollouts. Requires the
-  # PVC to be RWX (rook-cephfs); rook-ceph-block is RWO and forces Recreate.
-  replicas: 2
+  # Grafana's default SQLite backend is single-writer. Two pods sharing
+  # /var/lib/grafana/grafana.db corrupt each other's plugin-manager rows
+  # (symptom: "No root app page component found" in the Logs Drilldown UI).
+  # Pin replicas to 1 and forbid surge so a rollout never holds two pods on
+  # the volume at once. The next stage of this — moving Grafana to an external
+  # Postgres via `grafana.grafana.ini.database` — makes the pod fully
+  # stateless: persistence goes away entirely (drop this whole block, set
+  # `persistence.enabled: false`), not a storage-class swap.
+  replicas: 1
   deploymentStrategy:
     type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   persistence:
     enabled: true
     type: pvc
-    storageClassName: rook-cephfs
-    accessModes: ["ReadWriteMany"]
+    storageClassName: rook-ceph-block
+    accessModes: ["ReadWriteOnce"]
     size: 10Gi
   additionalDataSources:
     - name: Loki
