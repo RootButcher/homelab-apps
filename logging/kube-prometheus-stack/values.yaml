@@ -32,13 +32,16 @@ grafana:
     existingSecret: grafana-admin
     userKey: admin-user
     passwordKey: admin-password
+  # Two replicas behind a rolling update => zero-outage rollouts. Requires the
+  # PVC to be RWX (rook-cephfs); rook-ceph-block is RWO and forces Recreate.
+  replicas: 2
   deploymentStrategy:
-    type: Recreate
+    type: RollingUpdate
   persistence:
     enabled: true
     type: pvc
-    storageClassName: rook-ceph-block
-    accessModes: ["ReadWriteOnce"]
+    storageClassName: rook-cephfs
+    accessModes: ["ReadWriteMany"]
     size: 10Gi
   additionalDataSources:
     - name: Loki

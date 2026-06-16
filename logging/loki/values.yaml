@@ -25,6 +25,13 @@ loki:
     reject_old_samples: true
     reject_old_samples_max_age: 168h
     volume_enabled: true
+    # Covers the grafana-lokiexplore-app Drilldown UI's ~60d lookback on
+    # /detected_labels and /detected_fields. Default 30d1h trips a 400 storm.
+    max_query_length: 1500h
+  # Pattern ingester powers Grafana Logs Drilldown's /loki/api/v1/patterns
+  # endpoint. Off by default in SingleBinary; in-memory only, 3h retention.
+  pattern_ingester:
+    enabled: true
   compactor:
     working_directory: /var/loki/compactor
     delete_request_store: filesystem
