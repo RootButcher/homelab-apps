@@ -1,10 +1,9 @@
 # kube-prometheus-stack — Prometheus Operator + Prometheus + Alertmanager +
 # Grafana + node-exporter + kube-state-metrics. Single Helm release.
 #
-# Family folder: this Application is the chart workload AND owns the explicit
-# call-out to the secrets/ sub-app (Phase 3 Shape A — see the plan file).
-# The tier-2 discovery glob is depth-1 only; the last source below makes the
-# level-2 secrets sub-app discoverable from here.
+# secrets/application.yaml is discovered independently by the tier-2 logging-apps
+# stub (ArgoCD's directory glob crosses path separators, so the depth-2 file is
+# picked up). No need for an explicit call-out from here.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -32,12 +31,6 @@ spec:
       path: logging/kube-prometheus-stack
       directory:
         include: "ingressroute*.yaml"
-    # Explicit call-out of the level-2 sub-app (secrets):
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      path: logging/kube-prometheus-stack/secrets
-      directory:
-        include: "application.yaml"
   syncPolicy:
     # node-exporter is a DaemonSet that needs hostNetwork/hostPID/hostPath +
     # hostPort 9100. Talos cluster-default PodSecurity enforces `baseline`,
