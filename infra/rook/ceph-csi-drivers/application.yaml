@@ -1,0 +1,33 @@
+# Ceph-CSI drivers — RBD + CephFS Driver CRs reconciled by the
+# ceph-csi-operator that the rook-ceph chart's subchart installed.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ceph-csi-drivers
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rook-ceph
+  sources:
+    - chart: ceph-csi-drivers
+      repoURL: https://ceph.github.io/ceph-csi-operator
+      targetRevision: 1.0.1
+      helm:
+        valueFiles:
+          - $values/infra/rook/ceph-csi-drivers/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true

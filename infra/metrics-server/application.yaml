@@ -1,0 +1,32 @@
+# metrics-server — implements the k8s Metrics API so `kubectl top {nodes,pods}`,
+# HPA basic mode, and Lens live-stats work. No history (live values only); the
+# full Prometheus story lives in the `logging` stack.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metrics-server
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  sources:
+    - chart: metrics-server
+      repoURL: https://kubernetes-sigs.github.io/metrics-server/
+      targetRevision: 3.13.1  # bump from 3.12.2 TODO updater
+      helm:
+        valueFiles:
+          - $values/infra/metrics-server/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true

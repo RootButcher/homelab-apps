@@ -1,9 +1,5 @@
 # kube-prometheus-stack — Prometheus Operator + Prometheus + Alertmanager +
 # Grafana + node-exporter + kube-state-metrics. Single Helm release.
-#
-# secrets/application.yaml is discovered independently by the tier-2 logging-apps
-# stub (ArgoCD's directory glob crosses path separators, so the depth-2 file is
-# picked up). No need for an explicit call-out from here.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

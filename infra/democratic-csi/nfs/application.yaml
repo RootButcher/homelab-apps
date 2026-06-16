@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: democratic-csi-nfs
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: democratic-csi
+  sources:
+    - chart: democratic-csi
+      repoURL: https://democratic-csi.github.io/charts/
+      targetRevision: 0.15.1  # bump from 0.14.7 TODO updater
+      helm:
+        valueFiles:
+          - $values/infra/democratic-csi/nfs/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true

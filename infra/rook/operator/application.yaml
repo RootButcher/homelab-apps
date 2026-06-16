@@ -1,0 +1,45 @@
+# Rook-Ceph: official 3-chart install per
+# https://rook.io/docs/rook/latest-release/Helm-Charts/helm-charts/
+#   1. rook-ceph         (operator, this Application)
+#   2. ceph-csi-drivers  (CSI driver CRs, sibling Application)
+#   3. rook-ceph-cluster (CephCluster + pools + StorageClasses)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rook-ceph
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rook-ceph
+  sources:
+    - chart: rook-ceph
+      repoURL: https://charts.rook.io/release
+      targetRevision: v1.20.0  # bump from v1.15.5 TODO updater
+      helm:
+        valueFiles:
+          - $values/infra/rook/operator/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+  syncPolicy:
+    # Rook-Ceph mons / OSDs / MGRs need hostPath volumes — Talos's cluster-default
+    # PodSecurity admission enforces `baseline`, which forbids hostPath. Label the
+    # operator namespace `privileged` so the operator's child workloads can be
+    # admitted. Argo's managedNamespaceMetadata updates these labels on every sync.
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged
+        pod-security.kubernetes.io/audit: privileged
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true

@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  sources:
+    - chart: cert-manager
+      repoURL: https://charts.jetstack.io
+      targetRevision: v1.20.2
+      helm:
+        valueFiles:
+          - $values/infra/cert-manager/chart/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+    # cert-manager grafana dashboards — kustomize-generated ConfigMaps.
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: infra/cert-manager/chart/dashboards
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true

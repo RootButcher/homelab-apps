@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: traefik
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: traefik
+  sources:
+    - chart: traefik
+      repoURL: https://traefik.github.io/charts
+      targetRevision: 40.2.0  # bump from 32.0.0 TODO updater
+      helm:
+        valueFiles:
+          - $values/infra/traefik/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: infra/traefik
+      directory:
+        include: "ingressroute*.yaml"
+    # Traefik grafana dashboards — kustomize-generated ConfigMaps.
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: infra/traefik/dashboards
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+      - CreateNamespace=true

@@ -1,213 +1,58 @@
-# Tier 2 — infra stack master. One Application per app.
-# Helm pattern: chart + ref:values for valueFiles, plus a 3rd repo source
-#               pulling raw IngressRoute(s) co-located with the values file.
-# Raw pattern:  single `source:` with `path: infra/<app>` pointing at manifests.
-# TODO updater
+# Tier 2 — infra stack.
+#
+# Documents:
+#   1. AppProject `infra` — UI grouping + project boundary for every infra app.
+#   2. Application `infra-apps` — discovery stub that materializes every
+#      per-app application.yaml in this stack (ArgoCD's directory glob crosses
+#      path separators so both depth-1 and depth-2 files are picked up).
+#   3-5. Three Applications kept inline for now: `cilium`, `cilium-lb-ipam`,
+#      `argocd`. These are foundational to the cluster's self-recovery story;
+#      we leave them under tier-1's direct management rather than route through
+#      infra-apps. Migrate later once the rest of the stack is stable.
 ---
-# Rook-Ceph: official 3-chart install per
-# https://rook.io/docs/rook/latest-release/Helm-Charts/helm-charts/
-#   1. rook-ceph         (operator, this Application)
-#   2. ceph-csi-drivers  (CSI driver CRs, next Application)
-#   3. rook-ceph-cluster (CephCluster + pools + StorageClasses)
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: infra
+  namespace: argocd
+spec:
+  description: infra stack
+  sourceRepos:
+    - '*'
+  destinations:
+    - server: '*'
+      namespace: '*'
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: rook-ceph
+  name: infra-apps
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default
+  project: infra
   destination:
     server: https://kubernetes.default.svc
-    namespace: rook-ceph
-  sources:
-    - chart: rook-ceph
-      repoURL: https://charts.rook.io/release
-      targetRevision: v1.20.0  # bump from v1.15.5 TODO updater
-      helm:
-        valueFiles:
-          - $values/infra/rook/operator/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-  syncPolicy:
-    # Rook-Ceph mons / OSDs / MGRs need hostPath volumes — Talos's cluster-default
-    # PodSecurity admission enforces `baseline`, which forbids hostPath. Label the
-    # operator namespace `privileged` so the operator's child workloads can be
-    # admitted. Argo's managedNamespaceMetadata updates these labels on every sync.
-    managedNamespaceMetadata:
-      labels:
-        pod-security.kubernetes.io/enforce: privileged
-        pod-security.kubernetes.io/warn: privileged
-        pod-security.kubernetes.io/audit: privileged
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-# Ceph-CSI drivers — RBD + CephFS Driver CRs reconciled by the
-# ceph-csi-operator that the rook-ceph chart's subchart installed.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: ceph-csi-drivers
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: rook-ceph
-  sources:
-    - chart: ceph-csi-drivers
-      repoURL: https://ceph.github.io/ceph-csi-operator
-      targetRevision: 1.0.1
-      helm:
-        valueFiles:
-          - $values/infra/rook/ceph-csi-drivers/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-# Shared SOPS-encrypted TrueNAS API token, consumed by the two democratic-csi releases.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: democratic-csi
-  namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: democratic-csi
+    namespace: argocd
   source:
     repoURL: https://github.com/RootButcher/homelab-apps
     targetRevision: HEAD
-    path: infra/democratic-csi/secrets
-    plugin:
-      name: kustomize-sops
+    path: infra
+    directory:
+      recurse: true
+      include: "{*/application.yaml,*/application-secrets.yaml}"
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: democratic-csi-iscsi
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: democratic-csi
-  sources:
-    - chart: democratic-csi
-      repoURL: https://democratic-csi.github.io/charts/
-      targetRevision: 0.15.1  # bump from 0.14.7 TODO updater
-      helm:
-        valueFiles:
-          - $values/infra/democratic-csi/iscsi/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: democratic-csi-nfs
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: democratic-csi
-  sources:
-    - chart: democratic-csi
-      repoURL: https://democratic-csi.github.io/charts/
-      targetRevision: 0.15.1  # bump from 0.14.7 TODO updater
-      helm:
-        valueFiles:
-          - $values/infra/democratic-csi/nfs/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-# CephCluster + CephBlockPool + CephFilesystem + StorageClasses via helm chart.
-# Dashboard IngressRoute is a 3rd source so it stays co-located with values.yaml.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: rook-ceph-cluster
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: rook-ceph
-  sources:
-    - chart: rook-ceph-cluster
-      repoURL: https://charts.rook.io/release
-      targetRevision: v1.20.0  # bump from v1.15.5 TODO updater
-      helm:
-        valueFiles:
-          - $values/infra/rook/cluster/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      path: infra/rook/cluster
-      directory:
-        include: "ingressroute*.yaml"
-    # Ceph grafana dashboards — kustomize-generated ConfigMaps.
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      path: infra/rook/cluster/dashboards
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
       - CreateNamespace=true
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -218,7 +63,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default
+  project: infra
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
@@ -257,7 +102,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default
+  project: infra
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
@@ -265,94 +110,6 @@ spec:
     repoURL: https://github.com/RootButcher/homelab-apps
     targetRevision: HEAD
     path: infra/cilium/lb-ipam
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: cert-manager
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: cert-manager
-  sources:
-    - chart: cert-manager
-      repoURL: https://charts.jetstack.io
-      targetRevision: v1.20.2
-      helm:
-        valueFiles:
-          - $values/infra/cert-manager/chart/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-    # cert-manager grafana dashboards — kustomize-generated ConfigMaps.
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      path: infra/cert-manager/chart/dashboards
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-# Cloudflare API token (SOPS), consumed by the cert-manager ClusterIssuers.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: cert-manager-secrets
-  namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: cert-manager
-  source:
-    repoURL: https://github.com/RootButcher/homelab-apps
-    targetRevision: HEAD
-    path: infra/cert-manager/secrets
-    plugin:
-      name: kustomize-sops
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-# ClusterIssuers + wildcard Certificate + default TLSStore (plain manifests).
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: cert-manager-config
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: cert-manager
-  source:
-    repoURL: https://github.com/RootButcher/homelab-apps
-    targetRevision: HEAD
-    path: infra/cert-manager/config
   syncPolicy:
     automated:
       prune: true
@@ -373,7 +130,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default
+  project: infra
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
@@ -402,77 +159,4 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
-      - CreateNamespace=true
----
-# metrics-server — implements the k8s Metrics API so `kubectl top {nodes,pods}`,
-# HPA basic mode, and Lens live-stats work. No history (live values only); the
-# full Prometheus story lives in the `logging` stack.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: metrics-server
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: kube-system
-  sources:
-    - chart: metrics-server
-      repoURL: https://kubernetes-sigs.github.io/metrics-server/
-      targetRevision: 3.13.1  # bump from 3.12.2 TODO updater
-      helm:
-        valueFiles:
-          - $values/infra/metrics-server/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: traefik
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: traefik
-  sources:
-    - chart: traefik
-      repoURL: https://traefik.github.io/charts
-      targetRevision: 40.2.0  # bump from 32.0.0 TODO updater
-      helm:
-        valueFiles:
-          - $values/infra/traefik/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      path: infra/traefik
-      directory:
-        include: "ingressroute*.yaml"
-    # Traefik grafana dashboards — kustomize-generated ConfigMaps.
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      path: infra/traefik/dashboards
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - RespectIgnoreDifferences=true
       - CreateNamespace=true

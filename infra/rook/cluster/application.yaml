@@ -1,0 +1,40 @@
+# CephCluster + CephBlockPool + CephFilesystem + StorageClasses via helm chart.
+# Dashboard IngressRoute is a 3rd source so it stays co-located with values.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rook-ceph-cluster
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rook-ceph
+  sources:
+    - chart: rook-ceph-cluster
+      repoURL: https://charts.rook.io/release
+      targetRevision: v1.20.0  # bump from v1.15.5 TODO updater
+      helm:
+        valueFiles:
+          - $values/infra/rook/cluster/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: infra/rook/cluster
+      directory:
+        include: "ingressroute*.yaml"
+    # Ceph grafana dashboards — kustomize-generated ConfigMaps.
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: infra/rook/cluster/dashboards
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
