@@ -60,8 +60,7 @@ kind: Application
 metadata:
   name: cilium
   namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
+  # No resources-finalizer
 spec:
   project: infra
   destination:
@@ -127,8 +126,7 @@ kind: Application
 metadata:
   name: argocd
   namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
+  # No resources-finalizer
 spec:
   project: infra
   destination:

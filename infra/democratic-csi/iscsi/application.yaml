@@ -3,8 +3,7 @@ kind: Application
 metadata:
   name: democratic-csi-iscsi
   namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
+  # No resources-finalizer
 spec:
   project: infra
   destination:

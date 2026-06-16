@@ -5,8 +5,7 @@ kind: Application
 metadata:
   name: rook-ceph-cluster
   namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
+  # No resources-finalizer 
 spec:
   project: infra
   destination:

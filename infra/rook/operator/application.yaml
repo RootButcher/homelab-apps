@@ -10,8 +10,7 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
+  # No resources-finalizer
 spec:
   project: infra
   destination:
