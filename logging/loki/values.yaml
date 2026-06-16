@@ -38,6 +38,11 @@ loki:
     retention_enabled: true
     retention_delete_delay: 2h
 
+# Override the chart's broken hostname-based resolver default — workaround for grafana/loki#14013.
+gateway:
+  nginxConfig:
+    resolver: "10.96.0.10 valid=15s"
+
 singleBinary:
   replicas: 1
   persistence:
