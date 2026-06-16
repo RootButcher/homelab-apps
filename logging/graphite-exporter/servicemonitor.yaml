@@ -12,6 +12,7 @@ spec:
     - port: metrics
       interval: 15s
       path: /metrics
+      honorLabels: true
   namespaceSelector:
     matchNames:
       - monitoring
