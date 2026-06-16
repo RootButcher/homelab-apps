@@ -1,230 +1,54 @@
-# Tier 2 — logging stack master. One Application per app.
+# Tier 2 — logging stack.
 #
-# Patterns mirror apps/infra/app-of-apps.yaml:
-#   - helm chart with co-located IngressRoute → three sources (chart,
-#     ref:values, raw 'ingressroute*.yaml' directory).
-#   - helm chart, values only → two sources (chart + ref:values).
-#
-# Storage: PVCs use `rook-ceph-block` from the infra stack's rook-ceph-cluster.
-# The infra stack's Tier-1 Application is reconciled before this one (file
-# ordering in apps/app-of-apps.yaml), so by the time these apps come up
-# rook-ceph block has its StorageClass registered.
-#
-# Out of scope for this pass (called out so they aren't forgotten):
-#   - Loki object-storage backend; filesystem PVC is the v1.
-#   - Pod-log DaemonSet; needs a per-node Vector or Alloy DS scraping kubelet.
+# Two YAML documents:
+#   1. AppProject `logging` — UI grouping + project boundary for every logging app.
+#   2. Application `logging-apps` — discovery stub that materializes every
+#      depth-1 application.yaml in this stack. Recursion limit is exactly one:
+#      sub-apps nested deeper (e.g. kube-prometheus-stack/secrets/application.yaml)
+#      must be explicitly called out by their depth-1 parent — see the parent's
+#      application.yaml sources.
 ---
-# kube-prometheus-stack-secrets — Grafana admin credentials, pre-created so the
-# chart's `grafana.admin.existingSecret` skips its randAlphaNum generator (the
-# generator's non-deterministic output was the source of a chart-managed drift
-# loop that rolled the Grafana pod every reconcile).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: logging
+  namespace: argocd
+spec:
+  description: logging stack
+  sourceRepos:
+    - '*'
+  destinations:
+    - server: '*'
+      namespace: '*'
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: kube-prometheus-stack-secrets
+  name: logging-apps
   namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default
+  project: logging
   destination:
     server: https://kubernetes.default.svc
-    namespace: monitoring
+    namespace: argocd
   source:
     repoURL: https://github.com/RootButcher/homelab-apps
     targetRevision: HEAD
-    path: logging/kube-prometheus-stack/secrets
-    plugin:
-      name: kustomize-sops
+    path: logging
+    directory:
+      recurse: true
+      include: "{*/application.yaml,*/application-secrets.yaml}"
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-# kube-prometheus-stack — Prometheus Operator + Prometheus + Alertmanager +
-# Grafana + node-exporter + kube-state-metrics. Single Helm release.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: kube-prometheus-stack
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: monitoring
-  sources:
-    - chart: kube-prometheus-stack
-      repoURL: https://prometheus-community.github.io/helm-charts
-      targetRevision: 86.2.2
-      helm:
-        valueFiles:
-          - $values/logging/kube-prometheus-stack/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      path: logging/kube-prometheus-stack
-      directory:
-        include: "ingressroute*.yaml"
-  syncPolicy:
-    # node-exporter is a DaemonSet that needs hostNetwork/hostPID/hostPath +
-    # hostPort 9100. Talos cluster-default PodSecurity enforces `baseline`,
-    # which forbids all of those. Label the namespace `privileged` so the
-    # DaemonSet pods are admitted. Same fix as the rook-ceph Application.
-    managedNamespaceMetadata:
-      labels:
-        pod-security.kubernetes.io/enforce: privileged
-        pod-security.kubernetes.io/warn: privileged
-        pod-security.kubernetes.io/audit: privileged
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-# prometheus-pushgateway — endpoint the homelab-ci fio CLI pushes to with
-# `--gateway`. ServiceMonitor wires it back into the kube-prometheus-stack
-# Prometheus, so metrics flow: CLI → Pushgateway → Prometheus → Grafana.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: prometheus-pushgateway
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: monitoring
-  sources:
-    - chart: prometheus-pushgateway
-      repoURL: https://prometheus-community.github.io/helm-charts
-      targetRevision: 3.6.1
-      helm:
-        valueFiles:
-          - $values/logging/prometheus-pushgateway/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      path: logging/prometheus-pushgateway
-      directory:
-        include: "ingressroute*.yaml"
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-# Loki — single-binary mode, filesystem storage on rook-ceph-block.
-# Grafana datasource is registered via kube-prometheus-stack values.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: loki
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: monitoring
-  sources:
-    - chart: loki
-      repoURL: https://grafana.github.io/helm-charts
-      targetRevision: 6.55.0
-      helm:
-        valueFiles:
-          - $values/logging/loki/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-# graphite-exporter — bridge between TrueNAS Reporting → Exporters (Graphite
-# line protocol push) and Prometheus. 
-# Receives on 10.0.11.106:9109 (Cilium LB), maps with the supporterino TrueNAS
-# mapping, exposes /metrics on 9108 scraped via ServiceMonitor.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: graphite-exporter
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: monitoring
-  source:
-    repoURL: https://github.com/RootButcher/homelab-apps
-    targetRevision: HEAD
-    path: logging/graphite-exporter
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-# Vector — log receiver for Talos's machine.logging.destinations push.
-# Aggregator (Deployment) behind a LoadBalancer Service pinned to 10.0.11.105
-# via Cilium LB IPAM. Two TCP listeners: 5514 for service logs, 5044 for
-# kernel logs (the latter paired with Talos `talos.logging.kernel=` kernel
-# cmdline arg set in tofu). Forwards both to loki-gateway.
-#
-# Why Vector and not Alloy: Talos emits raw newline-delimited JSON over TCP,
-# which Alloy's loki.source.api (HTTP) cannot accept. Vector's socket source
-# with `decoding.codec: json` is purpose-built for this.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: vector
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: monitoring
-  sources:
-    - chart: vector
-      repoURL: https://helm.vector.dev
-      targetRevision: 0.56.0
-      helm:
-        valueFiles:
-          - $values/logging/vector/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
       - CreateNamespace=true

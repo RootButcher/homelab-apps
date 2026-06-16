@@ -1,0 +1,31 @@
+# Loki — single-binary mode, filesystem storage on rook-ceph-block.
+# Grafana datasource is registered via kube-prometheus-stack values.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: logging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  sources:
+    - chart: loki
+      repoURL: https://grafana.github.io/helm-charts
+      targetRevision: 6.55.0
+      helm:
+        valueFiles:
+          - $values/logging/loki/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true

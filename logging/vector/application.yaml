@@ -1,0 +1,38 @@
+# Vector — log receiver for Talos's machine.logging.destinations push.
+# Aggregator (Deployment) behind a LoadBalancer Service pinned to 10.0.11.105
+# via Cilium LB IPAM. Two TCP listeners: 5514 for service logs, 5044 for
+# kernel logs (the latter paired with Talos `talos.logging.kernel=` kernel
+# cmdline arg set in tofu). Forwards both to loki-gateway.
+#
+# Why Vector and not Alloy: Talos emits raw newline-delimited JSON over TCP,
+# which Alloy's loki.source.api (HTTP) cannot accept. Vector's socket source
+# with `decoding.codec: json` is purpose-built for this.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vector
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: logging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  sources:
+    - chart: vector
+      repoURL: https://helm.vector.dev
+      targetRevision: 0.56.0
+      helm:
+        valueFiles:
+          - $values/logging/vector/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true

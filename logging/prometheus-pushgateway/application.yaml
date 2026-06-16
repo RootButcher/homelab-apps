@@ -1,0 +1,37 @@
+# prometheus-pushgateway — endpoint the homelab-ci fio CLI pushes to with
+# `--gateway`. ServiceMonitor wires it back into the kube-prometheus-stack
+# Prometheus, so metrics flow: CLI → Pushgateway → Prometheus → Grafana.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-pushgateway
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: logging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  sources:
+    - chart: prometheus-pushgateway
+      repoURL: https://prometheus-community.github.io/helm-charts
+      targetRevision: 3.6.1
+      helm:
+        valueFiles:
+          - $values/logging/prometheus-pushgateway/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: logging/prometheus-pushgateway
+      directory:
+        include: "ingressroute*.yaml"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
