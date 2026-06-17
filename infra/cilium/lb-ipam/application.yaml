@@ -1,0 +1,26 @@
+# Cilium LB IPAM config — raw type. CiliumLoadBalancerIPPool +
+# CiliumL2AnnouncementPolicy live here so they can be edited without
+# touching the cilium helm release directly. Discovered by infra-apps.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium-lb-ipam
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  source:
+    repoURL: https://github.com/RootButcher/homelab-apps
+    targetRevision: HEAD
+    path: infra/cilium/lb-ipam
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true

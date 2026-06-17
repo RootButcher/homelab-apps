@@ -5,10 +5,12 @@
 #   2. Application `infra-apps` — discovery stub that materializes every
 #      per-app application.yaml in this stack (ArgoCD's directory glob crosses
 #      path separators so both depth-1 and depth-2 files are picked up).
-#   3-5. Three Applications kept inline for now: `cilium`, `cilium-lb-ipam`,
-#      `argocd`. These are foundational to the cluster's self-recovery story;
-#      we leave them under tier-1's direct management rather than route through
-#      infra-apps. Migrate later once the rest of the stack is stable.
+#
+# Every infra app — including the foundational ones (`cilium` at
+# cilium/chart/application.yaml, `cilium-lb-ipam` at cilium/lb-ipam/application.yaml,
+# `argocd` at argocd/application.yaml) — is now discovered by infra-apps. The
+# cilium/argocd Application manifests deliberately omit the resources-finalizer so
+# removing them never cascade-deletes the CNI or ArgoCD itself.
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
@@ -53,108 +55,4 @@ spec:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: cilium
-  namespace: argocd
-  # No resources-finalizer
-spec:
-  project: infra
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: kube-system
-  sources:
-    - chart: cilium
-      repoURL: https://helm.cilium.io/
-      targetRevision: 1.19.4  # bump from 1.16.5 TODO updater
-      helm:
-        valueFiles:
-          - $values/infra/cilium/chart/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      path: infra/cilium/chart
-      directory:
-        include: "ingressroute*.yaml"
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - RespectIgnoreDifferences=true
-      - CreateNamespace=true
----
-# Cilium LB IPAM config — raw type. CiliumLoadBalancerIPPool +
-# CiliumL2AnnouncementPolicy live here so they can be edited without
-# touching the cilium helm release directly.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: cilium-lb-ipam
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: infra
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: kube-system
-  source:
-    repoURL: https://github.com/RootButcher/homelab-apps
-    targetRevision: HEAD
-    path: infra/cilium/lb-ipam
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
-      - CreateNamespace=true
----
-# ArgoCD self-managing itself: helm chart from argo-helm + values.yaml in this repo
-# + 3rd source for the IngressRoute. Tofu still does first-time install on a fresh
-# cluster; lifecycle ignore_changes on tofu's helm_release.argocd keeps it out of
-# the way once ArgoCD has adopted the release.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: argocd
-  namespace: argocd
-  # No resources-finalizer
-spec:
-  project: infra
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: argocd
-  sources:
-    - chart: argo-cd
-      repoURL: https://argoproj.github.io/argo-helm
-      targetRevision: 9.5.19  # bump from 7.8.26 TODO updater
-      helm:
-        valueFiles:
-          - $values/infra/argocd/values.yaml
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      ref: values
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      path: infra/argocd
-      directory:
-        include: "ingressroute*.yaml"
-    # ArgoCD grafana dashboards — kustomize-generated ConfigMaps.
-    - repoURL: https://github.com/RootButcher/homelab-apps
-      targetRevision: HEAD
-      path: infra/argocd/dashboards
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - ServerSideApply=true
       - CreateNamespace=true

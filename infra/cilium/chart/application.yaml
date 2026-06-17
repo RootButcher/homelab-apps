@@ -1,0 +1,39 @@
+# Cilium — CNI + kube-proxy replacement. Discovered by infra-apps.
+# No resources-finalizer: deleting this Application must NOT cascade-delete the
+# CNI out from under the cluster. Tofu does the first-time install on a fresh
+# cluster; lifecycle ignore_changes on tofu's helm_release.cilium keeps it out
+# of the way once ArgoCD has adopted the release.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium
+  namespace: argocd
+  # No resources-finalizer
+spec:
+  project: infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  sources:
+    - chart: cilium
+      repoURL: https://helm.cilium.io/
+      targetRevision: 1.19.4  # bump from 1.16.5 TODO updater
+      helm:
+        valueFiles:
+          - $values/infra/cilium/chart/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: infra/cilium/chart
+      directory:
+        include: "ingressroute*.yaml"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+      - CreateNamespace=true

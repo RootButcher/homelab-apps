@@ -1,0 +1,43 @@
+# ArgoCD self-managing itself: helm chart from argo-helm + values.yaml in this repo
+# + 3rd source for the IngressRoute + 4th source for the grafana dashboards.
+# Discovered by infra-apps. No resources-finalizer: deleting this Application must
+# NOT cascade-delete ArgoCD itself. Tofu does first-time install on a fresh cluster;
+# lifecycle ignore_changes on tofu's helm_release.argocd keeps it out of the way
+# once ArgoCD has adopted the release.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  # No resources-finalizer
+spec:
+  project: infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  sources:
+    - chart: argo-cd
+      repoURL: https://argoproj.github.io/argo-helm
+      targetRevision: 9.5.19  # bump from 7.8.26 TODO updater
+      helm:
+        valueFiles:
+          - $values/infra/argocd/values.yaml
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: infra/argocd
+      directory:
+        include: "ingressroute*.yaml"
+    # ArgoCD grafana dashboards — kustomize-generated ConfigMaps.
+    - repoURL: https://github.com/RootButcher/homelab-apps
+      targetRevision: HEAD
+      path: infra/argocd/dashboards
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
