@@ -34,6 +34,12 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    retry:
+      limit: 10
+      backoff:
+        duration: 1m
+        factor: 2
+        maxDuration: 32m      # 1m → 2m → 4m → 8m → 16m → 32m (capped)
     syncOptions:
       - ServerSideApply=true
       - CreateNamespace=true
