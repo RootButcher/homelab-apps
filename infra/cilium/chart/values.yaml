@@ -71,8 +71,7 @@ hubble:
   ui:
     enabled: true
     service:
-      type: NodePort
-      nodePort: 30090
+      type: ClusterIP
   metrics:
     enabled:
       - dns
