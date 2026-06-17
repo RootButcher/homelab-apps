@@ -3,29 +3,6 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: csi-test-nfs
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: test
-  source:
-    repoURL: https://github.com/RootButcher/homelab-apps
-    targetRevision: HEAD
-    path: test/csi-test-nfs
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
   name: csi-test-ceph
   namespace: argocd
   finalizers:

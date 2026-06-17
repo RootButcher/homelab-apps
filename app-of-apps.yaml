@@ -55,7 +55,7 @@ spec:
       - CreateNamespace=true
 ---
 # logging stack — observability apps Separated from `infra` because the
-# observability layer depends on storage (rook-ceph / democratic-csi) provided
+# observability layer depends on storage (rook-ceph / TrueNAS CSI) provided
 # by `infra` and benefits from its own lifecycle.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
