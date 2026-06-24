@@ -43,3 +43,7 @@ spec:
     syncOptions:
       - ServerSideApply=true
       - CreateNamespace=true
+      # Lets this app install its bundled monitoring.coreos.com CRDs on a clean
+      # cluster even though it also ships traefik.io IngressRoutes whose CRD isn't
+      # registered yet — breaks the fresh-build circular CRD deadlock with traefik.
+      - SkipDryRunOnMissingResource=true
