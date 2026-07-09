@@ -1,0 +1,26 @@
+# Talos fix for the node plugin's iscsiadm.
+#
+# Upstream's node DaemonSet runs a postStart hook that renames the bundled iscsiadm
+# and installs a wrapper: `nsenter --mount=/host/proc/1/ns/mnt -- /usr/sbin/iscsiadm`.
+# That assumes a normal host with iscsiadm at /usr/sbin. Talos has NO iscsiadm in
+# PID 1's mount namespace — it ships via the `iscsi-tools` extension at
+# /usr/local/sbin/iscsiadm — so the wrapper returns `exit 127` and NodeStageVolume fails.
+#
+# The container already bundles its own iscsiadm, and because the DaemonSet runs with
+# hostNetwork/hostPID/hostIPC it talks straight to the extension's iscsid (verified:
+# `iscsiadm -m session` returns cleanly). So we drop the wrapper install and keep only
+# the lock dir — the driver then calls the container-native iscsiadm directly.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: truenas-csi-node
+  namespace: truenas-csi
+spec:
+  template:
+    spec:
+      containers:
+        - name: csi-node
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", "mkdir -p /run/lock/iscsi"]
