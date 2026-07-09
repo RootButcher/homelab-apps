@@ -1,0 +1,26 @@
+# Talos iscsiadm shim for the truenas-csi node plugin.
+# Talos runs iscsid inside the iscsi-tools extension's own mount namespace (with a matching
+# iscsiadm at /usr/local/sbin). The node container's bundled iscsiadm hangs driving it, and
+# upstream's nsenter-into-PID1 wrapper hits exit 127 (PID 1 has no iscsiadm). Fix: run the
+# extension's own iscsiadm inside iscsid's namespaces — the documented Talos + CSI approach.
+# postStart copies this over /usr/sbin/iscsiadm.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: truenas-csi-iscsiadm-wrapper
+  namespace: truenas-csi
+data:
+  iscsiadm: |
+    #!/bin/sh
+    # Locate the Talos ext-iscsid daemon (host PID ns, viewed via /host/proc) and exec the
+    # extension's matching iscsiadm inside its namespaces.
+    PID=""
+    for p in /host/proc/[0-9]*; do
+      if [ "$(cat "$p/comm" 2>/dev/null)" = iscsid ]; then PID="${p##*/}"; break; fi
+    done
+    if [ -z "$PID" ]; then
+      echo "iscsiadm-shim: ext-iscsid (iscsid) not running on this node" >&2
+      exit 1
+    fi
+    exec nsenter --mount="/host/proc/$PID/ns/mnt" --net="/host/proc/$PID/ns/net" -- \
+      /usr/local/sbin/iscsiadm "$@"

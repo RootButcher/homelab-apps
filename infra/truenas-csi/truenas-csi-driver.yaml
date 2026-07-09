@@ -1,11 +1,6 @@
-# Vendored from https://github.com/truenas/truenas-csi (tag v1.1.1),
-# deploy/truenas-csi-driver.yaml — bump from v1.1.1 TODO updater.
-# Local edits vs upstream:
-#   - Namespace removed  → created by the Application (managedNamespaceMetadata: privileged).
-#   - Secret removed      → supplied by truenas-csi/secrets/ (SOPS + KSOPS).
-#   - ConfigMap removed   → owned by config.yaml (env-specific, non-secret).
-#   - image tag pinned via kustomization.yaml `images:` (leave :latest here).
-# Everything else is upstream verbatim — re-vendor the whole file on a version bump.
+# Vendored from truenas/truenas-csi v1.1.1 (deploy/truenas-csi-driver.yaml) — bump from v1.1.1 TODO updater.
+# Stripped vs upstream: Namespace (Application owns it), Secret (→ secrets/ SOPS), ConfigMap (→ config.yaml).
+# Image tag pinned in kustomization.yaml. Re-vendor wholesale on a version bump.
 ---
 # ServiceAccount for the CSI driver
 apiVersion: v1

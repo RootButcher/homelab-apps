@@ -1,14 +1,8 @@
-# iSCSI RWO block class on the nvme mirror. Volumes are created at
-# nvme/k8s-iscsi/pvc-<uuid> (datasetPath) and inherit the pool's ZFS encryption
-# key from the usb keystore — so DON'T set the `encryption` param (that would make
-# the driver mint its own per-volume key and defeat the keystore model).
-#
-# reclaimPolicy: Retain — deleting a PVC/app must NOT destroy the zvol. Validate
-# with the delete-and-reattach test before trusting it.
-#
-# NOT the cluster default yet: rook-ceph-block still holds the default flag. Flip
-# `is-default-class` here to "true" (and clear it on rook-ceph-block) during the
-# monitoring migration — see the storage plan.
+# iSCSI RWO block class on the nvme mirror. Volumes land at nvme/k8s-iscsi/pvc-<uuid> and
+# inherit the pool's ZFS encryption from the usb keystore — do NOT set `encryption` (that
+# mints a driver-managed per-volume key instead). Retain keeps the zvol when a PVC is deleted.
+# Not the cluster default yet — flip is-default-class here (and clear it on rook-ceph-block)
+# at monitoring-migration time.
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:

@@ -5,6 +5,7 @@ resources:
   - truenas-csi-driver.yaml
   - config.yaml
   - storageclass.yaml
+  - iscsiadm-wrapper.yaml
 patches:
   # Talos: replace the node plugin's iscsiadm nsenter wrapper (exit 127 on Talos).
   - path: patch-node-talos-iscsiadm.yaml
