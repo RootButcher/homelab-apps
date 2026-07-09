@@ -1,0 +1,36 @@
+# truenas-csi — official TrueNAS CSI driver (WebSocket JSON-RPC, csi.truenas.io).
+# Replaces Rook-Ceph as the cluster's block backend: iSCSI RWO volumes from the
+# `nvme` mirror pool (parent dataset nvme/k8s-iscsi, encryption inherited from the
+# pool key on the usb keystore). Vendored manifest + kustomize; see truenas-csi-driver.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: truenas-csi
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  # No resources-finalizer — like cilium/argocd/rook, removing this Application must
+  # never cascade-delete the live CSI driver out from under mounted volumes.
+spec:
+  project: infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: truenas-csi
+  source:
+    repoURL: https://github.com/RootButcher/homelab-apps
+    targetRevision: HEAD
+    path: infra/truenas-csi
+  syncPolicy:
+    # The node DaemonSet is privileged (hostPID/IPC/Network, host root, /dev, /etc/iscsi).
+    # Talos enforces `baseline` PodSecurity cluster-wide → label the namespace privileged.
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged
+        pod-security.kubernetes.io/audit: privileged
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true

@@ -1,0 +1,14 @@
+# Driver connection config (non-secret). The API key lives in secrets/ (SOPS).
+# TrueNAS VM 100 = 10.0.11.20. iSCSI base name + portal per the box's iSCSI config.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: truenas-csi-config
+  namespace: truenas-csi
+data:
+  truenasURL: "wss://10.0.11.20/api/current"
+  truenasInsecure: "true"          # self-signed TrueNAS cert
+  defaultPool: "nvme"              # the encrypted NVMe mirror
+  nfsServer: "10.0.11.20"
+  iscsiPortal: "10.0.11.20:3260"
+  iscsiIQNBase: "iqn.2005-10.org.freenas.ctl"
