@@ -85,7 +85,7 @@ cephBlockPools:
     storageClass:
       enabled: true
       name: rook-ceph-block
-      isDefault: true
+      isDefault: false  # default moved to truenas-iscsi; Rook being retired
       reclaimPolicy: Delete
       allowVolumeExpansion: true
       volumeBindingMode: Immediate

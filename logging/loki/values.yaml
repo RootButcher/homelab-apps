@@ -1,7 +1,6 @@
 # Loki — single-binary mode. Homelab scale; distributed mode is for >1TB/day.
-# Object storage (S3-compatible) is the long-term backend; until we stand up
-# Rook-Ceph RGW or point at TrueNAS MinIO, filesystem PVC on rook-ceph-block
-# is fine.
+# Object storage (S3-compatible) is the long-term backend; until we point at
+# TrueNAS MinIO, a filesystem PVC on truenas-iscsi is fine.
 
 deploymentMode: SingleBinary
 
@@ -47,7 +46,7 @@ singleBinary:
   replicas: 1
   persistence:
     enabled: true
-    storageClass: rook-ceph-block
+    storageClass: truenas-iscsi
     accessModes: ["ReadWriteOnce"]
     size: 50Gi
 

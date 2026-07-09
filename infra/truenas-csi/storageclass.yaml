@@ -1,18 +1,19 @@
-# iSCSI RWO block class on the nvme mirror. Volumes land at nvme/k8s-iscsi/pvc-<uuid> and
-# inherit the pool's ZFS encryption from the usb keystore — do NOT set `encryption` (that
-# mints a driver-managed per-volume key instead). Retain keeps the zvol when a PVC is deleted.
-# Not the cluster default yet — flip is-default-class here (and clear it on rook-ceph-block)
-# at monitoring-migration time.
+# Cluster-default iSCSI RWO block class on the nvme mirror. Volumes land at
+# nvme/k8s-iscsi/pvc-<uuid> and inherit the pool's ZFS encryption from the usb keystore — do
+# NOT set `encryption` (that mints a driver-managed per-volume key instead). Retain keeps the
+# zvol when a PVC is deleted.
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: truenas-iscsi
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
 provisioner: csi.truenas.io
 parameters:
   protocol: "iscsi"
   datasetPath: "k8s-iscsi"     # parent under defaultPool (nvme) — driver auto-creates it
   compression: "LZ4"
-  volblocksize: "16K"          # DB-friendly default
+  volblocksize: "64K"          # matches the sequential Prometheus/Loki write pattern
   iscsi.blocksize: "4096"
 reclaimPolicy: Retain
 volumeBindingMode: Immediate
