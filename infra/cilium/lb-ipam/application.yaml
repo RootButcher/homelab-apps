@@ -17,6 +17,11 @@ spec:
     repoURL: https://github.com/RootButcher/homelab-apps
     targetRevision: HEAD
     path: infra/cilium/lb-ipam
+    directory:
+      # Only the CRs — not this application.yaml, which infra-apps owns. Without
+      # this, cilium-lb-ipam also manages its own Application object and fights
+      # infra-apps over the argocd tracking-id annotation (endless OutOfSync flap).
+      include: "{pool.yaml,l2-policy.yaml}"
   syncPolicy:
     automated:
       prune: true
