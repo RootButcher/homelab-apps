@@ -4,7 +4,8 @@ namespace: truenas-csi
 resources:
   - truenas-csi-driver.yaml
   - config.yaml
-  - storageclass.yaml
+  - storageclass-iscsi.yaml
+  - storageclass-nfs.yaml
   - iscsiadm-wrapper.yaml
 patches:
   # Talos: replace the node plugin's iscsiadm nsenter wrapper (exit 127 on Talos).
