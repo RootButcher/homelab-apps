@@ -56,7 +56,9 @@ customConfig:
         .source = "talos-service"
         .service = del(."talos-service") || "unknown"
         .level   = del(."talos-level") || "info"
-        .node    = .host
+        # Talos tags each line with its hostname via machine.logging extraTags;
+        # fall back to the socket peer (.host, a SNAT'd pod IP) until that lands.
+        .node    = del(."talos-node") || .host
     label_truenas:
       type: remap
       inputs: [truenas_syslog]
@@ -65,21 +67,35 @@ customConfig:
         .node   = .hostname
         .level  = .severity
   sinks:
-    loki:
+    # Two Loki sinks so each carries only the labels its source populates:
+    # `appname`/`facility` exist only on the TrueNAS syslog path, so applying
+    # them to Talos events would fail every template render (log-flood warnings).
+    #
+    # The vector chart wraps customConfig in helm's `tpl` function, so any
+    # `{{ ... }}` we put here is evaluated as a Go template at render time
+    # and fails because the field names aren't helm functions. Escape with
+    # raw-string backticks so helm emits literal `{{ field }}` for Vector
+    # to interpolate at runtime.
+    loki_talos:
       type: loki
-      inputs: [label_services, label_truenas]
+      inputs: [label_services]
       endpoint: http://loki-gateway.monitoring.svc.cluster.local
       encoding:
         codec: json
-      # The vector chart wraps customConfig in helm's `tpl` function, so any
-      # `{{ ... }}` we put here is evaluated as a Go template at render time
-      # and fails because the field names aren't helm functions. Escape with
-      # raw-string backticks so helm emits literal `{{ field }}` for Vector
-      # to interpolate at runtime.
+      labels:
+        source:  '{{ `{{ source }}` }}'
+        service: '{{ `{{ service }}` }}'
+        level:   '{{ `{{ level }}` }}'
+        node:    '{{ `{{ node }}` }}'
+    loki_truenas:
+      type: loki
+      inputs: [label_truenas]
+      endpoint: http://loki-gateway.monitoring.svc.cluster.local
+      encoding:
+        codec: json
       labels:
         source:   '{{ `{{ source }}` }}'
-        service:  '{{ `{{ service }}` }}'
-        level:    '{{ `{{ level }}` }}'
         node:     '{{ `{{ node }}` }}'
+        level:    '{{ `{{ level }}` }}'
         appname:  '{{ `{{ appname }}` }}'
         facility: '{{ `{{ facility }}` }}'

@@ -1,4 +1,11 @@
 
+# Talos runs kube-proxy-less (Cilium replaces it; cluster.proxy.disabled: true),
+# so there is no kube-proxy to scrape — disabling drops the false KubeProxyDown alert.
+# CM/scheduler need no config here: their targets are auto-discovered at the CP node
+# IPs and go green once Talos binds their metrics to 0.0.0.0 (machine config).
+kubeProxy:
+  enabled: false
+
 prometheus:
   prometheusSpec:
     retention: 30d
