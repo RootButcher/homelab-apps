@@ -1,0 +1,27 @@
+# Dynamic RWX NFS class on the nvme mirror. Volumes land at nvme/k8s-nfs/pvc-<uuid>
+# and inherit the pool's ZFS encryption from the usb keystore — do NOT set `encryption`
+# (that mints a driver-managed per-volume key instead). Retain keeps the dataset when a
+# PVC is deleted. For general shared/app RWX data; the existing media library is served
+# separately via hand-written static NFS PVs (not this class — no data copy).
+#
+# Requires (TrueNAS side): the NFS service enabled/running on 10.0.11.20. The driver
+# auto-creates the k8s-nfs parent + per-PVC child datasets and their NFS exports via the
+# WebSocket API.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: truenas-nfs
+provisioner: csi.truenas.io
+parameters:
+  protocol: "nfs"
+  datasetPath: "k8s-nfs"          # parent under defaultPool (nvme) — driver auto-creates it
+  compression: "LZ4"
+  nfs.networks: "10.0.11.0/24"    # restrict the export to the node subnet; nodes mount on
+                                  # host network so the client IP is the node's 10.0.11.x.
+                                  # Widen if a mount is refused from an unexpected source.
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+# NFSv4.1: no rpcbind/statd userspace needed (Talos nodes don't run them), unlike NFSv3.
+mountOptions:
+  - nfsvers=4.1
