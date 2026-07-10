@@ -1,0 +1,29 @@
+# GitHub credentials for ArgoCD (SOPS-encrypted). A repo-creds credential template so
+# ArgoCD can clone private repos under github.com/RootButcher.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: github-access
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  source:
+    repoURL: https://github.com/RootButcher/homelab-apps
+    targetRevision: HEAD
+    path: infra/github-access
+    plugin:
+      name: kustomize-sops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true

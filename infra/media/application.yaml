@@ -1,0 +1,33 @@
+# Bootstrap pointer for the media stack, which lives in the PRIVATE homelab-media-stack repo.
+# Kept in infra — alongside the github-access credential it depends on — so the whole
+# "needs the private-repo PAT" bootstrap concern stays in one stack. sync-wave runs it after
+# github-access (wave -2) so the credential exists before ArgoCD clones the private repo.
+# This is ONLY a pointer; the media AppProject + apps are defined in the private repo's
+# app-of-apps.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: media
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  source:
+    repoURL: https://github.com/RootButcher/homelab-media-stack
+    targetRevision: HEAD
+    path: .
+    directory:
+      recurse: false
+      include: "app-of-apps.yaml"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
