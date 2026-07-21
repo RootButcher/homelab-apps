@@ -22,7 +22,7 @@ spec:
   sources:
     - chart: vector
       repoURL: https://helm.vector.dev
-      targetRevision: 0.56.0
+      targetRevision: 0.57.0  # bump from 0.56.0 TODO updater
       helm:
         valueFiles:
           - $values/logging/vector/values.yaml

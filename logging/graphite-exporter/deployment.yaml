@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: graphite-exporter
-          image: prom/graphite-exporter:v0.16.0
+          image: prom/graphite-exporter:v0.17.0  # bump from v0.16.0 TODO updater
           args:
             - --graphite.mapping-config=/etc/graphite-exporter/graphite_mapping.conf
           ports:
